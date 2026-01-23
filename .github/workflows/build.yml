@@ -116,8 +116,8 @@ jobs:
       - name: Initialize Tauri Android
         run: npm run tauri android init
 
-      - name: Build Android APK
-        run: npm run tauri android build -- --apk true
+      - name: Build Android APK (Debug - signed)
+        run: npm run tauri android build -- --apk true --debug
         env:
           NDK_HOME: ${{ env.NDK_HOME }}
 
