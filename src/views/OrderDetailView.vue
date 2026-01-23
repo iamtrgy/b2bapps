@@ -1,0 +1,265 @@
+<template>
+  <AppLayout>
+    <div class="flex-1 p-4 lg:p-6 overflow-y-auto">
+      <div class="max-w-5xl mx-auto">
+        <!-- Back Link -->
+        <router-link
+          to="/orders"
+          class="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
+        >
+          <ArrowLeft class="h-4 w-4" />
+          Siparişlere Dön
+        </router-link>
+
+        <div v-if="isLoading" class="py-12 flex items-center justify-center">
+          <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+
+        <div v-else-if="!order" class="py-12 text-center">
+          <AlertCircle class="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+          <p class="text-sm text-muted-foreground">Sipariş bulunamadı</p>
+        </div>
+
+        <div v-else class="space-y-4">
+          <!-- Order Header -->
+          <div class="p-4 rounded-lg border bg-card">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h1 class="text-lg font-semibold">{{ order.order_number }}</h1>
+                <p class="text-xs text-muted-foreground mt-1">
+                  {{ formatDate(order.created_at) }} tarihinde oluşturuldu
+                </p>
+              </div>
+              <Badge :variant="statusVariants[order.status] || 'secondary'" class="text-[10px]">
+                {{ formatStatus(order.status) }}
+              </Badge>
+            </div>
+
+            <div class="mt-4 grid grid-cols-2 gap-4">
+              <div>
+                <h3 class="text-xs text-muted-foreground mb-1">Müşteri</h3>
+                <p class="text-sm font-medium">{{ order.customer?.company_name || 'Bilinmiyor' }}</p>
+                <p class="text-xs text-muted-foreground">{{ order.customer?.contact_name }}</p>
+              </div>
+              <div>
+                <h3 class="text-xs text-muted-foreground mb-1">Oluşturan</h3>
+                <p class="text-sm">{{ order.created_by?.name || 'Bilinmiyor' }}</p>
+              </div>
+            </div>
+
+            <div v-if="order.notes" class="mt-4">
+              <h3 class="text-xs text-muted-foreground mb-1">Notlar</h3>
+              <p class="text-sm">{{ order.notes }}</p>
+            </div>
+          </div>
+
+          <!-- Order Items -->
+          <div class="rounded-lg border bg-card">
+            <div class="px-4 py-3 border-b">
+              <h2 class="text-sm font-medium">Sipariş Kalemleri</h2>
+            </div>
+            <div class="divide-y">
+              <div
+                v-for="item in order.items"
+                :key="item.id"
+                class="px-4 py-3 flex items-center gap-3"
+              >
+                <div class="w-12 h-12 bg-muted rounded-lg overflow-hidden flex-shrink-0">
+                  <img
+                    v-if="item.product?.image_url"
+                    :src="item.product.image_url"
+                    :alt="item.product?.name"
+                    class="w-full h-full object-cover"
+                  />
+                  <div v-else class="w-full h-full flex items-center justify-center">
+                    <ImageIcon class="h-5 w-5 text-muted-foreground/50" />
+                  </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium">{{ item.product?.name || `Ürün #${item.product?.id}` }}</p>
+                  <p v-if="item.product?.sku" class="text-xs text-muted-foreground">{{ item.product.sku }}</p>
+                  <p class="text-xs text-muted-foreground mt-0.5">
+                    {{ item.quantity_ordered }} x {{ formatPrice(item.unit_price) }}
+                  </p>
+                </div>
+                <div class="text-right flex-shrink-0">
+                  <p class="text-sm font-semibold">{{ formatPrice(item.line_total) }}</p>
+                </div>
+              </div>
+            </div>
+            <div class="px-4 py-3 bg-muted/50 border-t space-y-2">
+              <div class="flex justify-between text-sm">
+                <span class="text-muted-foreground">Ara Toplam</span>
+                <span>{{ formatPrice(order.subtotal) }}</span>
+              </div>
+              <div v-if="order.discount_total > 0" class="flex justify-between text-sm">
+                <span class="text-muted-foreground">İndirim</span>
+                <span class="text-green-600">-{{ formatPrice(order.discount_total) }}</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-muted-foreground">KDV</span>
+                <span>{{ formatPrice(order.vat_total) }}</span>
+              </div>
+              <Separator />
+              <div class="flex justify-between font-semibold">
+                <span>Toplam</span>
+                <span class="text-primary">{{ formatPrice(order.total) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex justify-end gap-3">
+            <Button
+              v-if="!order.afas_synced"
+              :disabled="isSyncing"
+              @click="handleSyncToAfas"
+            >
+              <Loader2 v-if="isSyncing" class="h-4 w-4 mr-2 animate-spin" />
+              AFAS'a Gönder
+            </Button>
+            <span v-else class="text-sm text-green-600 flex items-center gap-1">
+              <CheckCircle class="h-4 w-4" />
+              AFAS'a Gönderildi
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sync Result Modal -->
+    <Dialog :open="!!syncMessage" @update:open="syncMessage = null">
+      <DialogContent class="sm:max-w-sm text-center">
+        <DialogHeader>
+          <div
+            :class="[
+              'mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-5',
+              syncMessage?.type === 'success' ? 'bg-green-100' : 'bg-destructive/10'
+            ]"
+          >
+            <CheckCircle v-if="syncMessage?.type === 'success'" class="h-10 w-10 text-green-600" />
+            <AlertCircle v-else class="h-10 w-10 text-destructive" />
+          </div>
+
+          <DialogTitle class="text-xl">
+            {{ syncMessage?.type === 'success' ? 'Gönderim Başarılı' : 'Gönderim Başarısız' }}
+          </DialogTitle>
+
+          <DialogDescription>
+            {{ syncMessage?.text }}
+          </DialogDescription>
+        </DialogHeader>
+
+        <DialogFooter class="pt-4">
+          <Button class="w-full" @click="syncMessage = null">
+            Kapat
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </AppLayout>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { ArrowLeft, AlertCircle, ImageIcon, CheckCircle, Loader2 } from 'lucide-vue-next'
+import AppLayout from '@/components/layout/AppLayout.vue'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { orderApi } from '@/services/api'
+import type { Order } from '@/types'
+
+const route = useRoute()
+
+const order = ref<Order | null>(null)
+const isLoading = ref(false)
+const isSyncing = ref(false)
+const syncMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null)
+
+const statusVariants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  pending: 'secondary',
+  processing: 'default',
+  completed: 'default',
+  cancelled: 'destructive',
+}
+
+async function fetchOrder() {
+  const id = parseInt(route.params.id as string, 10)
+  if (isNaN(id)) return
+
+  isLoading.value = true
+  try {
+    order.value = await orderApi.get(id)
+  } catch (error) {
+    console.error('Failed to fetch order:', error)
+    order.value = null
+  } finally {
+    isLoading.value = false
+  }
+}
+
+async function handleSyncToAfas() {
+  if (!order.value) return
+
+  isSyncing.value = true
+  syncMessage.value = null
+
+  try {
+    const result = await orderApi.sendToAfas(order.value.id)
+    if (result.success) {
+      syncMessage.value = { type: 'success', text: result.message || 'Order synced to AFAS successfully' }
+      // Refresh order to get updated status
+      await fetchOrder()
+    } else {
+      syncMessage.value = { type: 'error', text: result.message || 'Failed to sync order' }
+    }
+  } catch (error: any) {
+    console.error('Failed to sync order:', error)
+    syncMessage.value = {
+      type: 'error',
+      text: error.response?.data?.message || error.message || 'Failed to sync order to AFAS'
+    }
+  } finally {
+    isSyncing.value = false
+  }
+}
+
+const statusLabels: Record<string, string> = {
+  pending: 'Beklemede',
+  processing: 'İşleniyor',
+  completed: 'Tamamlandı',
+  cancelled: 'İptal Edildi',
+}
+
+function formatStatus(status: string | null | undefined): string {
+  if (!status) return 'Bilinmiyor'
+  return statusLabels[status] || status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')
+}
+
+function formatPrice(price: number): string {
+  return new Intl.NumberFormat('tr-TR', {
+    style: 'currency',
+    currency: 'EUR',
+  }).format(price)
+}
+
+function formatDate(dateString: string | null | undefined): string {
+  if (!dateString) return '-'
+  const date = new Date(dateString)
+  if (isNaN(date.getTime())) return '-'
+  return new Intl.DateTimeFormat('tr-TR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
+onMounted(() => {
+  fetchOrder()
+})
+</script>

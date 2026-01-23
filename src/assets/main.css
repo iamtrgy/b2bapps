@@ -1,0 +1,211 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 5%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 93%;
+    --secondary-foreground: 0 0% 5%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 35%;
+    --accent: 0 0% 94%;
+    --accent-foreground: 0 0% 5%;
+    --destructive: 0 84.2% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 82%;
+    --input: 0 0% 82%;
+    --ring: 0 0% 3.9%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 95%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 0 0% 18%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 22%;
+    --input: 0 0% 22%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+/* High contrast mode for outdoor use */
+@media (prefers-contrast: high) {
+  :root {
+    --muted-foreground: 0 0% 25%;
+    --border: 0 0% 70%;
+    --input: 0 0% 70%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    touch-action: pan-x pan-y;
+  }
+}
+
+/* Touch utilities */
+@layer utilities {
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  .touch-feedback {
+    @apply active:scale-[0.97] active:brightness-95 transition-all duration-100;
+  }
+
+  .touch-feedback-sm {
+    @apply active:scale-[0.98] active:brightness-98 transition-all duration-75;
+  }
+
+  .touch-feedback-lg {
+    @apply active:scale-[0.95] active:brightness-90 transition-all duration-150;
+  }
+
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  .scrollable {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Safe area utilities */
+  .safe-area-top {
+    padding-top: max(env(safe-area-inset-top), 0.5rem);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+  }
+
+  .safe-area-left {
+    padding-left: max(env(safe-area-inset-left), 0.5rem);
+  }
+
+  .safe-area-right {
+    padding-right: max(env(safe-area-inset-right), 0.5rem);
+  }
+
+  .safe-area-inset {
+    padding-top: max(env(safe-area-inset-top), 0.5rem);
+    padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+    padding-left: max(env(safe-area-inset-left), 0.5rem);
+    padding-right: max(env(safe-area-inset-right), 0.5rem);
+  }
+
+  .safe-area-mb {
+    margin-bottom: max(env(safe-area-inset-bottom), 1rem);
+  }
+
+  .safe-area-mt {
+    margin-top: max(env(safe-area-inset-top), 1rem);
+  }
+
+  /* Mobile icon sizes */
+  .icon-touch {
+    @apply h-6 w-6;
+  }
+
+  .icon-sm-touch {
+    @apply h-5 w-5;
+  }
+
+  .icon-lg-touch {
+    @apply h-7 w-7;
+  }
+
+  .icon-xl-touch {
+    @apply h-8 w-8;
+  }
+}
+
+/* Print styles */
+@media print {
+  body > *:not(.print-content) {
+    display: none !important;
+  }
+
+  .print-content {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    padding: 20px;
+    background: white;
+    color: black;
+  }
+}
+
+@media screen {
+  .print-content {
+    display: none !important;
+  }
+}
