@@ -46,10 +46,15 @@ export const authApi = {
   },
 
   login: async (email: string, password: string, deviceName: string): Promise<LoginResponse> => {
-    const response = await api.post('/auth/login', {
-      email,
-      password,
-      device_name: deviceName,
+    const formData = new URLSearchParams()
+    formData.append('email', email)
+    formData.append('password', password)
+    formData.append('device_name', deviceName)
+
+    const response = await api.post('/auth/login', formData, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
     })
     return response.data
   },
