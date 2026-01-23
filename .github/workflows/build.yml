@@ -116,8 +116,43 @@ jobs:
       - name: Initialize Tauri Android
         run: npm run tauri android init
 
-      - name: Build Android APK (Debug - signed)
-        run: npm run tauri android build -- --apk true --debug
+      - name: Setup Android signing
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 --decode > $HOME/release.keystore
+          echo "storeFile=$HOME/release.keystore" > src-tauri/gen/android/keystore.properties
+          echo "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> src-tauri/gen/android/keystore.properties
+          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> src-tauri/gen/android/keystore.properties
+          echo "keyPassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> src-tauri/gen/android/keystore.properties
+
+      - name: Configure Gradle for release signing
+        run: |
+          cat >> src-tauri/gen/android/app/build.gradle.kts << 'EOF'
+
+          // Release signing configuration
+          android {
+              signingConfigs {
+                  create("release") {
+                      val keystorePropertiesFile = rootProject.file("keystore.properties")
+                      if (keystorePropertiesFile.exists()) {
+                          val keystoreProperties = java.util.Properties()
+                          keystoreProperties.load(keystorePropertiesFile.inputStream())
+                          storeFile = file(keystoreProperties["storeFile"] as String)
+                          storePassword = keystoreProperties["storePassword"] as String
+                          keyAlias = keystoreProperties["keyAlias"] as String
+                          keyPassword = keystoreProperties["keyPassword"] as String
+                      }
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig = signingConfigs.getByName("release")
+                  }
+              }
+          }
+          EOF
+
+      - name: Build Android APK (Release - signed)
+        run: npm run tauri android build -- --apk true
         env:
           NDK_HOME: ${{ env.NDK_HOME }}
 

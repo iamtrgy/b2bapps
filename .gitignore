@@ -30,3 +30,7 @@ src-tauri/gen/
 
 # TypeScript
 *.tsbuildinfo
+
+# Keystore
+*.keystore
+*.keystore.backup
