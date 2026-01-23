@@ -4,6 +4,9 @@ import { load } from '@tauri-apps/plugin-store'
 import { platform, arch } from '@tauri-apps/plugin-os'
 import api, { authApi } from '@/services/api'
 import type { Tenant, User, UserPermissions } from '@/types'
+import { useCustomerStore } from './customer'
+import { useProductStore } from './products'
+import { useCartStore } from './cart'
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -21,6 +24,16 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await authApi.verifyTenant(domain)
       if (response.success && response.tenant) {
+        // If switching to a different tenant, reset all stores
+        if (tenant.value && tenant.value.id !== response.tenant.id) {
+          const customerStore = useCustomerStore()
+          const productStore = useProductStore()
+          const cartStore = useCartStore()
+          customerStore.reset()
+          productStore.reset()
+          cartStore.clear()
+        }
+
         tenant.value = response.tenant
         // Set base URL for all future API calls
         api.defaults.baseURL = response.tenant.api_base_url
@@ -79,9 +92,25 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null
     user.value = null
     permissions.value = null
+    tenant.value = null
 
     // Clear auth header
     delete api.defaults.headers.common['Authorization']
+
+    // Clear API base URL
+    api.defaults.baseURL = undefined
+
+    // Reset all other stores
+    const customerStore = useCustomerStore()
+    const productStore = useProductStore()
+    const cartStore = useCartStore()
+    customerStore.reset()
+    productStore.reset()
+    cartStore.clear()
+
+    // Clear localStorage items
+    localStorage.removeItem('pos_selected_customer')
+    localStorage.removeItem('pos_remember_email')
 
     // Clear stored credentials
     await clearCredentials()
