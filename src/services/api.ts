@@ -35,7 +35,8 @@ api.interceptors.response.use(
 )
 
 // Central API URL (for tenant verification)
-const CENTRAL_API_URL = 'https://platform.test/api/pos'
+// This is the main B2B Nord platform that handles tenant verification
+const CENTRAL_API_URL = import.meta.env.VITE_CENTRAL_API_URL || 'https://b2bnord.com/api/pos'
 
 // Auth API
 export const authApi = {
