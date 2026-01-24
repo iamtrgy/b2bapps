@@ -116,40 +116,13 @@ jobs:
       - name: Initialize Tauri Android
         run: npm run tauri android init
 
-      - name: Configure edge-to-edge display and keyboard behavior
+      - name: Configure Android keyboard behavior
         run: |
-          # Create custom theme for edge-to-edge display
-          STYLES_FILE="src-tauri/gen/android/app/src/main/res/values/styles.xml"
-          cat > "$STYLES_FILE" << 'EOFSTYLES'
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <style name="Theme.App" parent="Theme.AppCompat.DayNight.NoActionBar">
-                  <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
-                  <item name="android:windowTranslucentStatus">false</item>
-                  <item name="android:windowTranslucentNavigation">false</item>
-                  <item name="android:statusBarColor">@android:color/transparent</item>
-                  <item name="android:navigationBarColor">@android:color/transparent</item>
-                  <item name="android:enforceNavigationBarContrast">false</item>
-                  <item name="android:enforceStatusBarContrast">false</item>
-                  <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-                  <item name="android:windowSoftInputMode">adjustResize</item>
-              </style>
-          </resources>
-          EOFSTYLES
-
           # Update AndroidManifest.xml to set keyboard resize mode
           MANIFEST_FILE="src-tauri/gen/android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST_FILE" ]; then
             # Add windowSoftInputMode to the main activity
-            sed -i 's/android:configChanges="/android:windowSoftInputMode="adjustResize" android:configChanges="/' "$MANIFEST_FILE"
-          fi
-
-          # Update MainActivity to enable edge-to-edge
-          MAIN_ACTIVITY="src-tauri/gen/android/app/src/main/java/com/b2bapps/pos/MainActivity.kt"
-          if [ -f "$MAIN_ACTIVITY" ]; then
-            # Add edge-to-edge imports and configuration
-            sed -i 's/import android.os.Bundle/import android.os.Bundle\nimport android.view.WindowManager\nimport androidx.core.view.WindowCompat\nimport androidx.core.view.WindowInsetsControllerCompat/' "$MAIN_ACTIVITY"
-            sed -i 's/super.onCreate(savedInstanceState)/super.onCreate(savedInstanceState)\n        WindowCompat.setDecorFitsSystemWindows(window, false)/' "$MAIN_ACTIVITY"
+            sed -i 's/android:configChanges="/android:windowSoftInputMode="adjustResize|stateHidden" android:configChanges="/' "$MANIFEST_FILE"
           fi
 
       - name: Setup keystore
