@@ -1,7 +1,7 @@
 <template>
-  <div class="flex justify-between py-2">
-    <span class="text-sm text-muted-foreground">{{ label }}</span>
-    <span class="text-sm" :class="valueClass">{{ displayValue }}</span>
+  <div class="flex justify-between py-2 md:py-1.5">
+    <span class="text-sm md:text-xs text-muted-foreground">{{ label }}</span>
+    <span class="text-sm md:text-xs" :class="valueClass">{{ displayValue }}</span>
   </div>
 </template>
 

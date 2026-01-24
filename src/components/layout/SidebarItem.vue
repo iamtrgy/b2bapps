@@ -35,7 +35,7 @@ import {
 
 interface Props {
   to?: string
-  icon: object
+  icon: object | Function
   label: string
 }
 

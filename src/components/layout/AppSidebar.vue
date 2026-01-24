@@ -1,8 +1,8 @@
 <template>
   <!-- Desktop Sidebar - Hidden on mobile -->
-  <aside class="hidden md:flex w-[60px] h-screen bg-background border-r border-border flex-col safe-area-top safe-area-bottom">
+  <aside class="hidden md:flex w-14 h-screen bg-background border-r border-border flex-col safe-area-top safe-area-bottom">
     <!-- Navigation -->
-    <nav class="flex-1 py-4 space-y-1">
+    <nav class="flex-1 py-3 space-y-0.5">
       <SidebarItem
         to="/pos"
         :icon="ShoppingCart"
@@ -21,7 +21,7 @@
     </nav>
 
     <!-- Bottom Actions -->
-    <div class="py-3 border-t border-border space-y-1">
+    <div class="py-2 border-t border-border">
       <SidebarItem
         :icon="LogOut"
         label="Çıkış"

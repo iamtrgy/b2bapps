@@ -21,7 +21,7 @@ import { useRoute } from 'vue-router'
 
 interface Props {
   to?: string
-  icon: object
+  icon: object | Function
   label: string
 }
 

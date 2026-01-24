@@ -35,11 +35,11 @@
 
     <!-- Notes -->
     <div class="mb-4 md:mb-3">
-      <Textarea
+      <Input
         :model-value="notes"
-        rows="2"
+        type="text"
         placeholder="Sipariş notları..."
-        class="text-sm md:text-xs resize-none"
+        class="h-10 md:h-8 text-sm md:text-xs"
         @update:model-value="$emit('update:notes', String($event ?? ''))"
       />
     </div>
@@ -62,7 +62,7 @@
 import { Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
 
 interface VatBreakdownItem {
   rate: number

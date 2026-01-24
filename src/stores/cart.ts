@@ -84,11 +84,13 @@ export const useCartStore = defineStore('cart', () => {
 
   // Actions
   function addItem(product: Product, quantity = 1, unitType: 'piece' | 'box' = 'box') {
+    // Check if product already exists with ANY unit type
     const existing = items.value.find(
-      (item) => item.product_id === product.id && item.unit_type === unitType
+      (item) => item.product_id === product.id
     )
 
     if (existing) {
+      // Product already in cart - just increase quantity (keep existing unit type)
       existing.quantity += quantity
     } else {
       // Use prices directly from API
@@ -109,8 +111,23 @@ export const useCartStore = defineStore('cart', () => {
         unit_type: unitType,
         pieces_per_box: product.pieces_per_box,
         vat_rate: product.vat_rate?.rate || 0,
+        // Broken case support
+        allow_broken_case: product.allow_broken_case,
+        broken_case_piece_price: product.broken_case_piece_price,
+        box_price: product.box_price,
       })
     }
+  }
+
+  function updateItemUnitType(index: number, unitType: 'piece' | 'box') {
+    const item = items.value[index]
+    if (!item) return
+
+    // Update unit type and price
+    item.unit_type = unitType
+    item.price = unitType === 'box'
+      ? (item.box_price || item.price)
+      : (item.broken_case_piece_price || item.price)
   }
 
   function updateQuantity(index: number, quantity: number) {
@@ -183,6 +200,7 @@ export const useCartStore = defineStore('cart', () => {
         price: item.price,
         base_price: item.base_price,
         unit_type: item.unit_type,
+        pieces_per_box: item.pieces_per_box,
         vat_rate: item.vat_rate,
       })),
       notes: notes.value || undefined,
@@ -215,6 +233,7 @@ export const useCartStore = defineStore('cart', () => {
     // Actions
     addItem,
     updateQuantity,
+    updateItemUnitType,
     removeItem,
     undoRemove,
     clearLastRemoved,

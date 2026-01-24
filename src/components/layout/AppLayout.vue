@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen bg-background flex overflow-hidden">
+  <div class="h-screen bg-background flex overflow-hidden pt-[env(safe-area-inset-top)] md:pt-0">
     <!-- Desktop Sidebar -->
     <AppSidebar />
 

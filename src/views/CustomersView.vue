@@ -1,10 +1,10 @@
 <template>
   <AppLayout>
-    <div class="flex-1 p-4 lg:p-6 overflow-y-auto">
+    <div class="flex-1 p-4 md:p-3 overflow-y-auto">
       <div class="max-w-3xl md:max-w-none mx-auto">
         <!-- Header -->
-        <div class="flex items-center justify-between mb-4">
-          <h1 class="text-lg font-semibold">{{ UI_TEXT.title }}</h1>
+        <div class="flex items-center justify-between mb-4 md:mb-3">
+          <h1 class="text-lg md:text-base font-semibold">{{ UI_TEXT.title }}</h1>
           <Button
             variant="ghost"
             size="icon"
@@ -12,35 +12,35 @@
             :aria-label="UI_TEXT.refresh"
             @click="refresh"
           >
-            <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': isLoading }" />
+            <RefreshCw class="h-5 w-5 md:h-4 md:w-4" :class="{ 'animate-spin': isLoading }" />
           </Button>
         </div>
 
         <!-- Search -->
-        <div class="relative mb-4">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div class="relative mb-4 md:mb-3">
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 md:h-4 md:w-4 text-muted-foreground" />
           <Input
             v-model="searchQuery"
             type="text"
             :placeholder="UI_TEXT.searchPlaceholder"
-            class="pl-9 h-9"
+            class="pl-10 md:pl-9 h-11 md:h-9 text-sm md:text-xs"
             :aria-label="UI_TEXT.searchPlaceholder"
             @input="handleSearch"
           />
           <Loader2
             v-if="isLoading && customers.length > 0"
-            class="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground"
+            class="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 md:h-4 md:w-4 animate-spin text-muted-foreground"
           />
         </div>
 
         <!-- Error State -->
         <div
           v-if="error"
-          class="mb-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center justify-between"
+          class="mb-4 md:mb-3 p-4 md:p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center justify-between"
         >
-          <p class="text-sm text-destructive">{{ error }}</p>
+          <p class="text-sm md:text-xs text-destructive">{{ error }}</p>
           <Button variant="ghost" size="sm" @click="refresh">
-            <RefreshCw class="h-4 w-4 mr-1" />
+            <RefreshCw class="h-4 w-4 md:h-3.5 md:w-3.5 mr-1" />
             {{ UI_TEXT.retry }}
           </Button>
         </div>
@@ -52,35 +52,35 @@
           role="status"
           :aria-label="UI_TEXT.loading"
         >
-          <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
+          <Loader2 class="h-8 w-8 md:h-6 md:w-6 animate-spin text-muted-foreground" />
         </div>
 
         <!-- Empty State -->
         <div v-else-if="!error && customers.length === 0" class="py-12 text-center">
-          <Users class="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-          <p class="text-sm text-muted-foreground">{{ UI_TEXT.noCustomers }}</p>
+          <Users class="h-12 w-12 md:h-10 md:w-10 text-muted-foreground/30 mx-auto mb-3" />
+          <p class="text-sm md:text-xs text-muted-foreground">{{ UI_TEXT.noCustomers }}</p>
         </div>
 
         <!-- Customer List - Grid on tablet, list on mobile -->
         <div v-else>
           <!-- Grid Layout for Tablet/Desktop -->
-          <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-2">
             <button
               v-for="customer in customers"
               :key="customer.id"
-              class="flex items-center gap-3 p-3 rounded-lg border bg-card text-left hover:bg-accent active:scale-[0.99] transition-all"
+              class="flex items-center gap-3 md:gap-2 p-4 md:p-3 rounded-xl md:rounded-lg border bg-card text-left hover:bg-accent active:scale-[0.99] transition-all"
               @click="handleCustomerClick(customer)"
             >
-              <Avatar class="h-9 w-9">
-                <AvatarFallback :class="getTierColor(customer.customer_tier)" class="text-xs font-semibold">
+              <Avatar class="h-11 w-11 md:h-9 md:w-9">
+                <AvatarFallback :class="getTierColor(customer.customer_tier)" class="text-sm md:text-xs font-semibold">
                   {{ getInitials(customer.company_name) }}
                 </AvatarFallback>
               </Avatar>
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold truncate">{{ customer.company_name }}</p>
-                <p class="text-xs text-muted-foreground truncate">{{ customer.contact_name }}</p>
+                <p class="text-sm md:text-xs font-semibold truncate">{{ customer.company_name }}</p>
+                <p class="text-xs md:text-[10px] text-muted-foreground truncate">{{ customer.shipping_address?.city || customer.billing_address?.city || '-' }}</p>
               </div>
-              <Badge variant="secondary" class="text-[10px] capitalize">
+              <Badge variant="secondary" :class="['text-xs md:text-[10px] capitalize', getTierBadgeColor(customer.customer_tier)]">
                 {{ customer.customer_tier }}
               </Badge>
             </button>
@@ -166,6 +166,7 @@ import {
   SEARCH_DEBOUNCE_MS,
   SCROLL_CONTAINER_OFFSET,
   TIER_COLORS,
+  TIER_BADGE_COLORS,
 } from '@/constants/customers'
 import type { Customer, Order, CustomerRecentOrder } from '@/types'
 
@@ -173,7 +174,11 @@ const router = useRouter()
 const { getCachedCustomer, setCachedCustomer, getInitials } = useCustomerCache()
 
 function getTierColor(tier: string): string {
-  return TIER_COLORS[tier] || 'bg-muted'
+  return TIER_COLORS[tier as keyof typeof TIER_COLORS] || 'bg-muted'
+}
+
+function getTierBadgeColor(tier: string): string {
+  return TIER_BADGE_COLORS[tier as keyof typeof TIER_BADGE_COLORS] || ''
 }
 
 // Customer list state

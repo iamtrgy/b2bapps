@@ -6,24 +6,24 @@
         <!-- Customer & Search (only when customer selected) -->
         <div v-if="selectedCustomer" class="p-4 md:p-3 bg-background border-b space-y-3 md:space-y-2">
           <!-- Selected Customer -->
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 md:gap-2">
             <button
               type="button"
-              class="flex items-center gap-3 flex-1 min-w-0 text-left"
+              class="flex items-center gap-3 md:gap-2 flex-1 min-w-0 text-left"
               @click="openCustomerDetail"
             >
-              <Avatar class="h-9 w-9">
-                <AvatarFallback :class="tierColors[selectedCustomer.customer_tier]">
+              <Avatar class="h-11 w-11 md:h-9 md:w-9">
+                <AvatarFallback :class="tierColors[selectedCustomer.customer_tier]" class="text-sm md:text-xs font-semibold">
                   {{ getInitials(selectedCustomer.company_name) }}
                 </AvatarFallback>
               </Avatar>
               <div class="flex-1 min-w-0">
-                <p class="font-medium text-sm text-foreground truncate">{{ selectedCustomer.company_name }}</p>
-                <p class="text-xs text-muted-foreground truncate">{{ selectedCustomer.contact_name }}</p>
+                <p class="font-semibold text-sm md:text-xs text-foreground truncate">{{ selectedCustomer.company_name }}</p>
+                <p class="text-xs md:text-[10px] text-muted-foreground truncate">{{ selectedCustomer.contact_name }}</p>
               </div>
             </button>
             <Button variant="ghost" size="sm" @click="clearCustomer">
-              <X class="h-4 w-4" />
+              <X class="h-5 w-5 md:h-4 md:w-4" />
             </Button>
           </div>
 
@@ -77,30 +77,33 @@
             </div>
 
             <div v-if="customerStore.isLoading" class="flex items-center justify-center py-12">
-              <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
+              <Loader2 class="h-8 w-8 md:h-6 md:w-6 animate-spin text-muted-foreground" />
             </div>
 
             <div v-else-if="customerStore.customers.length === 0" class="text-center py-12">
-              <Users class="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p class="text-sm text-muted-foreground">Müşteri bulunamadı</p>
+              <Users class="h-12 w-12 md:h-10 md:w-10 text-muted-foreground/30 mx-auto mb-3" />
+              <p class="text-sm md:text-xs text-muted-foreground">Müşteri bulunamadı</p>
             </div>
 
-            <div v-else class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">
+            <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-2">
               <button
                 v-for="customer in customerStore.customers"
                 :key="customer.id"
-                class="flex items-center gap-2 p-2 md:p-3 rounded-lg border bg-card text-left hover:bg-accent active:scale-[0.98] transition-all"
+                class="flex items-center gap-3 md:gap-2 p-4 md:p-3 rounded-xl md:rounded-lg border bg-card text-left hover:bg-accent active:scale-[0.99] transition-all"
                 @click="handleCustomerSelect(customer)"
               >
-                <Avatar class="h-8 w-8 md:h-9 md:w-9">
-                  <AvatarFallback :class="tierColors[customer.customer_tier]" class="text-xs font-semibold">
+                <Avatar class="h-11 w-11 md:h-9 md:w-9">
+                  <AvatarFallback :class="tierColors[customer.customer_tier]" class="text-sm md:text-xs font-semibold">
                     {{ getInitials(customer.company_name) }}
                   </AvatarFallback>
                 </Avatar>
                 <div class="flex-1 min-w-0">
-                  <p class="text-xs md:text-sm font-semibold truncate">{{ customer.company_name }}</p>
-                  <p class="text-[10px] md:text-xs text-muted-foreground truncate">{{ customer.contact_name }}</p>
+                  <p class="text-sm md:text-xs font-semibold truncate">{{ customer.company_name }}</p>
+                  <p class="text-xs md:text-[10px] text-muted-foreground truncate">{{ customer.shipping_address?.city || customer.billing_address?.city || '-' }}</p>
                 </div>
+                <Badge variant="secondary" :class="['text-xs md:text-[10px] capitalize', TIER_BADGE_COLORS[customer.customer_tier]]">
+                  {{ customer.customer_tier }}
+                </Badge>
               </button>
             </div>
           </div>
@@ -177,8 +180,9 @@
               v-for="(item, index) in cartStore.items"
               :key="`${item.product_id}-${item.unit_type}`"
               :item="item"
-              @update="(qty) => cartStore.updateQuantity(index, qty)"
+              @update="(qty) => handleUpdateQuantity(index, qty)"
               @remove="handleRemoveItem(index)"
+              @unit-type-change="(type) => cartStore.updateItemUnitType(index, type)"
             />
           </div>
         </div>
@@ -255,8 +259,9 @@
                 v-for="(item, index) in cartStore.items"
                 :key="`mobile-${item.product_id}-${item.unit_type}`"
                 :item="item"
-                @update="(qty) => cartStore.updateQuantity(index, qty)"
+                @update="(qty) => handleUpdateQuantity(index, qty)"
                 @remove="handleRemoveItem(index)"
+                @unit-type-change="(type) => cartStore.updateItemUnitType(index, type)"
               />
             </div>
           </div>
@@ -294,7 +299,7 @@
       <DialogContent class="max-w-md">
         <DialogHeader class="text-center">
           <Avatar class="h-16 w-16 mx-auto mb-2">
-            <AvatarFallback :class="tierColors[customerDetail?.customer_tier || '']" class="text-xl">
+            <AvatarFallback :class="customerDetail?.customer_tier ? tierColors[customerDetail.customer_tier] : 'bg-muted'" class="text-xl">
               {{ customerDetail ? getInitials(customerDetail.company_name) : '' }}
             </AvatarFallback>
           </Avatar>
@@ -601,12 +606,9 @@ const cartStore = useCartStore()
 const productStore = useProductStore()
 const customerStore = useCustomerStore()
 
-const tierColors: Record<string, string> = {
-  bronze: 'bg-orange-100 text-orange-700',
-  silver: 'bg-gray-200 text-gray-700',
-  gold: 'bg-yellow-100 text-yellow-700',
-  platinum: 'bg-purple-100 text-purple-700',
-}
+// Import tier colors from constants for consistency
+import { TIER_COLORS, TIER_BADGE_COLORS } from '@/constants/customers'
+const tierColors = TIER_COLORS
 
 function getInitials(name: string): string {
   return name
@@ -790,22 +792,28 @@ function handleAddToCart(product: Product) {
   const unitType = piecesPerBox > 1 ? 'box' : 'piece'
   const quantity = product.moq_quantity || 1
 
-  // Check stock level
+  // Check if product already exists in cart (any unit type)
   const existingItem = cartStore.items.find(
-    item => item.product_id === product.id && item.unit_type === unitType
+    item => item.product_id === product.id
   )
+
+  // Calculate total pieces based on existing item's unit type
   const currentQty = existingItem ? existingItem.quantity : 0
-  const totalQty = currentQty + quantity
-  const totalPieces = unitType === 'box' ? totalQty * piecesPerBox : totalQty
+  const existingUnitType = existingItem ? existingItem.unit_type : unitType
+  const existingPiecesPerBox = existingItem?.pieces_per_box || piecesPerBox
+  const currentPieces = existingUnitType === 'box' ? currentQty * existingPiecesPerBox : currentQty
+  const addingPieces = unitType === 'box' ? quantity * piecesPerBox : quantity
+  const totalPieces = currentPieces + addingPieces
 
   if (product.stock_quantity > 0 && totalPieces > product.stock_quantity) {
-    // Show low stock warning
+    // Show low stock warning and block add
     lowStockMessage.value = `Stokta sadece ${product.stock_quantity} adet var`
     showLowStockWarning.value = true
     if (lowStockTimeout) clearTimeout(lowStockTimeout)
     lowStockTimeout = setTimeout(() => {
       showLowStockWarning.value = false
     }, 3000)
+    return // Don't add to cart
   }
 
   cartStore.addItem(product, quantity, unitType)
@@ -840,6 +848,37 @@ function handleRemoveItem(index: number) {
     showUndoToast.value = false
     cartStore.clearLastRemoved()
   }, 5000)
+}
+
+function handleUpdateQuantity(index: number, newQty: number) {
+  const item = cartStore.items[index]
+  if (!item) return
+
+  // Decreasing is always allowed
+  if (newQty < item.quantity) {
+    cartStore.updateQuantity(index, newQty)
+    return
+  }
+
+  // Increasing - check stock only if product found with stock limit
+  const product = productStore.displayProducts.find(p => p.id === item.product_id)
+
+  if (product && product.stock_quantity > 0) {
+    const piecesPerBox = item.pieces_per_box || 1
+    const totalPieces = item.unit_type === 'box' ? newQty * piecesPerBox : newQty
+
+    if (totalPieces > product.stock_quantity) {
+      lowStockMessage.value = `Stokta sadece ${product.stock_quantity} adet var`
+      showLowStockWarning.value = true
+      if (lowStockTimeout) clearTimeout(lowStockTimeout)
+      lowStockTimeout = setTimeout(() => {
+        showLowStockWarning.value = false
+      }, 3000)
+      return
+    }
+  }
+
+  cartStore.updateQuantity(index, newQty)
 }
 
 function handleUndoRemove() {

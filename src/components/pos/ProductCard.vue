@@ -6,12 +6,12 @@
     @click="handleClick"
   >
     <!-- Product Image -->
-    <div class="relative aspect-square bg-muted">
+    <div class="relative aspect-square bg-white p-4 md:p-3">
       <img
         v-if="product.image_url"
         :src="product.image_url"
         :alt="product.name"
-        class="w-full h-full object-cover"
+        class="w-full h-full object-contain"
       />
       <div v-else class="w-full h-full flex items-center justify-center">
         <ImageIcon class="h-8 w-8 md:h-6 md:w-6 text-muted-foreground/30" />

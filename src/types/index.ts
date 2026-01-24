@@ -56,6 +56,7 @@ export interface Customer {
   total_orders?: number
   total_spent?: number
   vat_number?: string
+  city?: string
   billing_address?: CustomerAddress
   shipping_address?: CustomerAddress
   recent_orders?: CustomerRecentOrder[]
@@ -126,6 +127,10 @@ export interface CartItem {
   unit_type: 'piece' | 'box'
   pieces_per_box: number
   vat_rate: number
+  // Broken case support
+  allow_broken_case?: boolean
+  broken_case_piece_price?: number
+  box_price?: number // Original box price for switching back
 }
 
 // Order types
@@ -134,6 +139,7 @@ export interface OrderItemProduct {
   name: string
   sku: string
   image_url: string | null
+  pieces_per_box?: number
 }
 
 export interface OrderItem {
@@ -145,6 +151,7 @@ export interface OrderItem {
   original_price: number
   discount?: number
   unit_type: 'piece' | 'box'
+  pieces_per_box?: number
   vat_rate: number
   line_total: number
 }
@@ -176,6 +183,7 @@ export interface CreateOrderRequest {
     price: number
     base_price: number
     unit_type: 'piece' | 'box'
+    pieces_per_box: number
     vat_rate: number
   }[]
   notes?: string

@@ -55,16 +55,17 @@
 
           <!-- Order Items -->
           <div class="rounded-lg border bg-card">
-            <div class="px-4 py-3 border-b">
-              <h2 class="text-sm font-medium">Sipariş Kalemleri</h2>
+            <div class="px-4 md:px-3 py-3 md:py-2 border-b">
+              <h2 class="text-sm md:text-xs font-medium">Sipariş Kalemleri</h2>
             </div>
             <div class="divide-y">
               <div
                 v-for="item in order.items"
                 :key="item.id"
-                class="px-4 py-3 flex items-center gap-3"
+                class="px-4 md:px-3 py-3 md:py-2.5 flex gap-3 md:gap-2"
               >
-                <div class="w-12 h-12 bg-muted rounded-lg overflow-hidden flex-shrink-0">
+                <!-- Product Image -->
+                <div class="w-14 h-14 md:w-10 md:h-10 bg-muted rounded-lg overflow-hidden flex-shrink-0">
                   <img
                     v-if="item.product?.image_url"
                     :src="item.product.image_url"
@@ -72,36 +73,60 @@
                     class="w-full h-full object-cover"
                   />
                   <div v-else class="w-full h-full flex items-center justify-center">
-                    <ImageIcon class="h-5 w-5 text-muted-foreground/50" />
+                    <ImageIcon class="h-6 w-6 md:h-5 md:w-5 text-muted-foreground/30" />
                   </div>
                 </div>
+
+                <!-- Product Info -->
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium">{{ item.product?.name || `Ürün #${item.product?.id}` }}</p>
-                  <p v-if="item.product?.sku" class="text-xs text-muted-foreground">{{ item.product.sku }}</p>
-                  <p class="text-xs text-muted-foreground mt-0.5">
-                    {{ item.quantity_ordered }} x {{ formatPrice(item.unit_price) }}
+                  <p class="text-sm md:text-xs font-medium text-foreground leading-snug line-clamp-2">{{ item.product?.name || 'Ürün' }}</p>
+                  <div class="flex items-baseline flex-wrap gap-x-1.5 gap-y-0.5 mt-0.5">
+                    <span class="text-sm md:text-xs font-semibold text-primary">{{ formatPrice(item.unit_price) }}</span>
+                    <span
+                      v-if="item.original_price && item.original_price > item.unit_price"
+                      class="text-xs md:text-[10px] text-muted-foreground/70 line-through"
+                    >
+                      {{ formatPrice(item.original_price) }}
+                    </span>
+                    <span class="text-xs md:text-[10px] text-muted-foreground">/{{ item.unit_type === 'box' ? 'koli' : 'adet' }}</span>
+                    <span
+                      v-if="item.original_price && item.original_price > item.unit_price"
+                      class="bg-destructive text-destructive-foreground text-[10px] md:text-[9px] font-bold px-1.5 py-0.5 rounded"
+                    >
+                      -{{ Math.round(((item.original_price - item.unit_price) / item.original_price) * 100) }}%
+                    </span>
+                  </div>
+                  <!-- Piece price for boxes -->
+                  <p v-if="item.unit_type === 'box' && getPiecesPerBox(item) > 1" class="text-xs md:text-[10px] text-muted-foreground mt-0.5">
+                    {{ formatPrice(item.unit_price / getPiecesPerBox(item)) }}/adet
                   </p>
-                </div>
-                <div class="text-right flex-shrink-0">
-                  <p class="text-sm font-semibold">{{ formatPrice(item.line_total) }}</p>
+                  <div class="flex items-center justify-between mt-1">
+                    <span class="text-xs md:text-[10px] text-muted-foreground">
+                      {{ item.quantity_ordered }} {{ item.unit_type === 'box' ? 'koli' : 'adet' }}
+                      <template v-if="item.unit_type === 'box' && getPiecesPerBox(item) > 1">
+                        ({{ item.quantity_ordered * getPiecesPerBox(item) }} adet)
+                      </template>
+                    </span>
+                    <span class="text-sm md:text-xs font-bold text-foreground">{{ formatPrice(item.line_total) }}</span>
+                  </div>
                 </div>
               </div>
             </div>
-            <div class="px-4 py-3 bg-muted/50 border-t space-y-2">
-              <div class="flex justify-between text-sm">
+            <div class="px-4 md:px-3 py-3 md:py-2.5 bg-muted/50 border-t space-y-2 md:space-y-1.5">
+              <div class="flex justify-between text-sm md:text-xs">
                 <span class="text-muted-foreground">Ara Toplam</span>
                 <span>{{ formatPrice(order.subtotal) }}</span>
               </div>
-              <div v-if="order.discount_total > 0" class="flex justify-between text-sm">
+              <div v-if="order.discount_total > 0" class="flex justify-between text-sm md:text-xs">
                 <span class="text-muted-foreground">İndirim</span>
                 <span class="text-green-600">-{{ formatPrice(order.discount_total) }}</span>
               </div>
-              <div class="flex justify-between text-sm">
+              <div class="flex justify-between text-sm md:text-xs">
                 <span class="text-muted-foreground">KDV</span>
                 <span>{{ formatPrice(order.vat_total) }}</span>
               </div>
               <Separator />
-              <div class="flex justify-between font-semibold">
+              <div class="flex justify-between text-base md:text-sm font-bold">
                 <span>Toplam</span>
                 <span class="text-primary">{{ formatPrice(order.total) }}</span>
               </div>
@@ -244,6 +269,10 @@ function formatPrice(price: number): string {
     style: 'currency',
     currency: 'EUR',
   }).format(price)
+}
+
+function getPiecesPerBox(item: any): number {
+  return item.pieces_per_box || item.product?.pieces_per_box || 1
 }
 
 function formatDate(dateString: string | null | undefined): string {
