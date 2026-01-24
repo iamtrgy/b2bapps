@@ -116,7 +116,7 @@ jobs:
       - name: Initialize Tauri Android
         run: npm run tauri android init
 
-      - name: Configure edge-to-edge display
+      - name: Configure edge-to-edge display and keyboard behavior
         run: |
           # Create custom theme for edge-to-edge display
           STYLES_FILE="src-tauri/gen/android/app/src/main/res/values/styles.xml"
@@ -132,9 +132,17 @@ jobs:
                   <item name="android:enforceNavigationBarContrast">false</item>
                   <item name="android:enforceStatusBarContrast">false</item>
                   <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+                  <item name="android:windowSoftInputMode">adjustResize</item>
               </style>
           </resources>
           EOFSTYLES
+
+          # Update AndroidManifest.xml to set keyboard resize mode
+          MANIFEST_FILE="src-tauri/gen/android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST_FILE" ]; then
+            # Add windowSoftInputMode to the main activity
+            sed -i 's/android:configChanges="/android:windowSoftInputMode="adjustResize" android:configChanges="/' "$MANIFEST_FILE"
+          fi
 
           # Update MainActivity to enable edge-to-edge
           MAIN_ACTIVITY="src-tauri/gen/android/app/src/main/java/com/b2bapps/pos/MainActivity.kt"
