@@ -1,10 +1,10 @@
 <template>
   <AppLayout>
-    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden h-full min-h-0">
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden h-full min-h-0">
       <!-- Products Panel -->
       <div class="flex-1 flex flex-col bg-muted/30 min-w-0 min-h-0">
         <!-- Customer & Search (only when customer selected) -->
-        <div v-if="selectedCustomer" class="p-4 bg-background border-b space-y-4">
+        <div v-if="selectedCustomer" class="p-4 md:p-3 bg-background border-b space-y-3 md:space-y-2">
           <!-- Selected Customer -->
           <div class="flex items-center gap-3">
             <button
@@ -29,29 +29,29 @@
 
           <!-- Search -->
           <div class="relative">
-            <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 md:h-4 md:w-4 text-muted-foreground" />
             <Input
               v-model="searchQuery"
               type="text"
               placeholder="Ürün adı, SKU veya barkod ile ara..."
-              class="pl-10 pr-12 h-11 text-sm"
+              class="pl-10 pr-12 h-11 md:h-9 text-sm md:text-xs"
               @input="handleSearchInput"
               @keyup.enter="handleSearch(searchQuery)"
             />
             <Button
               variant="ghost"
               size="icon"
-              class="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9"
+              class="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 md:h-7 md:w-7"
               @click="showScanner = true"
             >
-              <QrCode class="h-5 w-5" />
+              <QrCode class="h-5 w-5 md:h-4 md:w-4" />
             </Button>
           </div>
 
           <!-- Quick Tabs -->
           <Tabs :model-value="activeTab" @update:model-value="handleTabChange($event as any)">
-            <TabsList class="h-10">
-              <TabsTrigger v-for="tab in tabs" :key="tab.id" :value="tab.id" class="text-sm px-4">
+            <TabsList class="h-10 md:h-8">
+              <TabsTrigger v-for="tab in tabs" :key="tab.id" :value="tab.id" class="text-sm md:text-xs px-4 md:px-2.5">
                 {{ tab.label }}
               </TabsTrigger>
             </TabsList>
@@ -59,19 +59,19 @@
         </div>
 
         <!-- Product Grid / Customer List -->
-        <div class="flex-1 overflow-y-auto p-4">
+        <div class="flex-1 overflow-y-auto p-4 md:p-3">
           <!-- Customer Selection Grid -->
           <div v-if="!selectedCustomer">
-            <h2 class="text-lg font-semibold mb-4">Müşteri Seçin</h2>
+            <h2 class="text-lg md:text-base font-semibold mb-4 md:mb-3">Müşteri Seçin</h2>
 
             <!-- Customer Search -->
-            <div class="relative mb-4">
-              <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <div class="relative mb-4 md:mb-3">
+              <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 md:h-4 md:w-4 text-muted-foreground" />
               <Input
                 v-model="customerSearchQuery"
                 type="text"
                 placeholder="Müşteri ara..."
-                class="pl-10 h-11 text-sm"
+                class="pl-10 h-11 md:h-9 text-sm md:text-xs"
                 @input="handleCustomerSearch"
               />
             </div>
@@ -85,21 +85,21 @@
               <p class="text-sm text-muted-foreground">Müşteri bulunamadı</p>
             </div>
 
-            <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div v-else class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">
               <button
                 v-for="customer in customerStore.customers"
                 :key="customer.id"
-                class="flex items-center gap-3 p-4 rounded-xl border bg-card text-left hover:bg-accent active:scale-[0.98] transition-all shadow-sm"
+                class="flex items-center gap-2 p-2 md:p-3 rounded-lg border bg-card text-left hover:bg-accent active:scale-[0.98] transition-all"
                 @click="handleCustomerSelect(customer)"
               >
-                <Avatar class="h-11 w-11">
-                  <AvatarFallback :class="tierColors[customer.customer_tier]" class="text-sm font-semibold">
+                <Avatar class="h-8 w-8 md:h-9 md:w-9">
+                  <AvatarFallback :class="tierColors[customer.customer_tier]" class="text-xs font-semibold">
                     {{ getInitials(customer.company_name) }}
                   </AvatarFallback>
                 </Avatar>
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-semibold truncate">{{ customer.company_name }}</p>
-                  <p class="text-sm text-muted-foreground truncate">{{ customer.contact_name }}</p>
+                  <p class="text-xs md:text-sm font-semibold truncate">{{ customer.company_name }}</p>
+                  <p class="text-[10px] md:text-xs text-muted-foreground truncate">{{ customer.contact_name }}</p>
                 </div>
               </button>
             </div>
@@ -123,13 +123,13 @@
 
           <template v-else>
             <!-- Results Count -->
-            <div class="flex items-center justify-between mb-3">
-              <p class="text-sm text-muted-foreground">
+            <div class="flex items-center justify-between mb-3 md:mb-2">
+              <p class="text-sm md:text-xs text-muted-foreground">
                 {{ productStore.productCount }} ürün bulundu
               </p>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3">
               <ProductCard
                 v-for="product in productStore.displayProducts"
                 :key="product.id"
@@ -142,15 +142,15 @@
         </div>
       </div>
 
-      <!-- Cart Panel - Desktop only (hidden on mobile) -->
+      <!-- Cart Panel - Desktop/Tablet (hidden on mobile) -->
       <div
         v-if="selectedCustomer"
-        class="hidden lg:flex w-96 bg-background border-l flex-col h-full min-h-0"
+        class="hidden md:flex md:w-72 lg:w-80 xl:w-96 bg-background border-l flex-col h-full min-h-0"
       >
         <!-- Cart Header -->
-        <div class="px-4 py-3 border-b flex items-center justify-between">
+        <div class="px-3 py-2 border-b flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <span class="text-sm font-medium">Sepet</span>
+            <span class="text-xs font-medium">Sepet</span>
             <Badge v-if="cartStore.itemCount > 0" variant="secondary" class="h-5 px-1.5 text-xs">
               {{ cartStore.itemCount }}
             </Badge>
@@ -206,7 +206,7 @@
       <button
         v-if="selectedCustomer"
         type="button"
-        class="lg:hidden fixed bottom-20 right-4 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-elevation-4 flex items-center justify-center touch-manipulation z-40"
+        class="md:hidden fixed bottom-20 right-4 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-elevation-4 flex items-center justify-center touch-manipulation z-40"
         @click="showMobileCart = true"
       >
         <ShoppingCart class="h-6 w-6" />

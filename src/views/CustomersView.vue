@@ -1,7 +1,7 @@
 <template>
   <AppLayout>
     <div class="flex-1 p-4 lg:p-6 overflow-y-auto">
-      <div class="max-w-3xl mx-auto">
+      <div class="max-w-3xl md:max-w-none mx-auto">
         <!-- Header -->
         <div class="flex items-center justify-between mb-4">
           <h1 class="text-lg font-semibold">{{ UI_TEXT.title }}</h1>
@@ -61,11 +61,35 @@
           <p class="text-sm text-muted-foreground">{{ UI_TEXT.noCustomers }}</p>
         </div>
 
-        <!-- Customer List -->
+        <!-- Customer List - Grid on tablet, list on mobile -->
         <div v-else>
+          <!-- Grid Layout for Tablet/Desktop -->
+          <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <button
+              v-for="customer in customers"
+              :key="customer.id"
+              class="flex items-center gap-3 p-3 rounded-lg border bg-card text-left hover:bg-accent active:scale-[0.99] transition-all"
+              @click="handleCustomerClick(customer)"
+            >
+              <Avatar class="h-9 w-9">
+                <AvatarFallback :class="getTierColor(customer.customer_tier)" class="text-xs font-semibold">
+                  {{ getInitials(customer.company_name) }}
+                </AvatarFallback>
+              </Avatar>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold truncate">{{ customer.company_name }}</p>
+                <p class="text-xs text-muted-foreground truncate">{{ customer.contact_name }}</p>
+              </div>
+              <Badge variant="secondary" class="text-[10px] capitalize">
+                {{ customer.customer_tier }}
+              </Badge>
+            </button>
+          </div>
+
+          <!-- Virtual List for Mobile -->
           <div
             ref="scrollContainerRef"
-            class="overflow-y-auto"
+            class="overflow-y-auto md:hidden"
             :style="scrollContainerStyle"
             role="list"
             aria-label="Müşteri listesi"
@@ -130,6 +154,8 @@ import { Users, Search, Loader2, RefreshCw } from 'lucide-vue-next'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { CustomerListItem, CustomerDetailSheet, OrderDetailSheet } from '@/components/customers'
 import { useCustomerCache } from '@/composables/useCustomerCache'
 import { customerApi, orderApi } from '@/services/api'
@@ -139,11 +165,16 @@ import {
   VIRTUAL_OVERSCAN,
   SEARCH_DEBOUNCE_MS,
   SCROLL_CONTAINER_OFFSET,
+  TIER_COLORS,
 } from '@/constants/customers'
 import type { Customer, Order, CustomerRecentOrder } from '@/types'
 
 const router = useRouter()
-const { getCachedCustomer, setCachedCustomer } = useCustomerCache()
+const { getCachedCustomer, setCachedCustomer, getInitials } = useCustomerCache()
+
+function getTierColor(tier: string): string {
+  return TIER_COLORS[tier] || 'bg-muted'
+}
 
 // Customer list state
 const customers = ref<Customer[]>([])

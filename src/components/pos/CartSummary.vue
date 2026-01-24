@@ -1,9 +1,9 @@
 <template>
-  <div class="border-t p-4 safe-area-bottom">
+  <div class="border-t p-4 md:p-3 safe-area-bottom">
     <!-- Items Count -->
-    <div class="flex items-center justify-between mb-3 pb-3 border-b">
-      <span class="text-sm text-muted-foreground">{{ itemCount }} ürün</span>
-      <div class="text-sm text-muted-foreground">
+    <div class="flex items-center justify-between mb-3 md:mb-2 pb-3 md:pb-2 border-b">
+      <span class="text-sm md:text-xs text-muted-foreground">{{ itemCount }} ürün</span>
+      <div class="text-sm md:text-xs text-muted-foreground">
         <span v-if="boxCount > 0">{{ boxCount }} koli</span>
         <span v-if="boxCount > 0 && pieceCount > 0"> · </span>
         <span v-if="pieceCount > 0">{{ pieceCount }} adet</span>
@@ -11,35 +11,35 @@
     </div>
 
     <!-- Summary Lines -->
-    <div class="space-y-2.5 mb-4">
-      <div class="flex justify-between text-base">
+    <div class="space-y-2.5 md:space-y-1.5 mb-4 md:mb-3">
+      <div class="flex justify-between text-base md:text-sm">
         <span class="text-muted-foreground">Ara Toplam</span>
         <span>{{ formatPrice(subtotal) }}</span>
       </div>
-      <div v-if="discount > 0" class="flex justify-between text-base">
+      <div v-if="discount > 0" class="flex justify-between text-base md:text-sm">
         <span class="text-muted-foreground">İndirim</span>
         <span class="text-green-600">-{{ formatPrice(discount) }}</span>
       </div>
       <template v-if="vatBreakdown.length > 0">
-        <div v-for="vat in vatBreakdown" :key="vat.rate" class="flex justify-between text-base">
+        <div v-for="vat in vatBreakdown" :key="vat.rate" class="flex justify-between text-base md:text-sm">
           <span class="text-muted-foreground">KDV (%{{ vat.rate }})</span>
           <span>{{ formatPrice(vat.amount) }}</span>
         </div>
       </template>
-      <Separator class="my-2" />
-      <div class="flex justify-between text-lg font-bold">
+      <Separator class="my-2 md:my-1.5" />
+      <div class="flex justify-between text-lg md:text-base font-bold">
         <span>Toplam</span>
         <span class="text-primary">{{ formatPrice(total) }}</span>
       </div>
     </div>
 
     <!-- Notes -->
-    <div class="mb-4">
+    <div class="mb-4 md:mb-3">
       <Textarea
         :model-value="notes"
         rows="2"
         placeholder="Sipariş notları..."
-        class="text-sm resize-none"
+        class="text-sm md:text-xs resize-none"
         @update:model-value="$emit('update:notes', String($event ?? ''))"
       />
     </div>
@@ -49,10 +49,10 @@
       variant="primary"
       size="lg"
       :disabled="!canCheckout || isSubmitting"
-      class="w-full"
+      class="w-full md:h-9 md:text-sm"
       @click="$emit('checkout')"
     >
-      <Loader2 v-if="isSubmitting" class="h-5 w-5 mr-2 animate-spin" />
+      <Loader2 v-if="isSubmitting" class="h-5 w-5 md:h-4 md:w-4 mr-2 animate-spin" />
       Sipariş Ver
     </Button>
   </div>
