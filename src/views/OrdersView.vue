@@ -283,7 +283,7 @@
         </div>
 
         <!-- Footer with Summary & Actions -->
-        <div class="border-t p-4 space-y-3 bg-muted/30">
+        <div class="border-t p-4 space-y-3 bg-muted/30 safe-area-bottom">
           <!-- Summary -->
           <div class="space-y-2">
             <div class="flex justify-between text-sm">
