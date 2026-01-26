@@ -3,41 +3,41 @@
     <div class="flex-1 p-4 md:p-3 overflow-y-auto">
       <div class="max-w-3xl md:max-w-none mx-auto">
         <!-- Title -->
-        <h1 class="text-lg md:text-base font-semibold mb-4 md:mb-3">Siparişler</h1>
+        <h1 class="text-lg font-semibold mb-4">Siparişler</h1>
 
         <!-- Search -->
-        <div class="relative mb-4 md:mb-3">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 md:h-4 md:w-4 text-muted-foreground" />
+        <div class="relative mb-4">
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             v-model="searchQuery"
             type="text"
             placeholder="Sipariş no veya müşteri ara..."
-            class="pl-10 md:pl-9 h-11 md:h-9 text-sm md:text-xs"
+            class="pl-10 h-11 text-sm"
             @input="handleSearchInput"
           />
         </div>
 
         <!-- Filter Tabs -->
-        <div class="flex items-center gap-3 md:gap-2 mb-4 md:mb-3 flex-wrap">
+        <div class="flex items-center gap-3 mb-4 md:mb-3 flex-wrap">
           <Tabs v-model="statusFilter">
-            <TabsList class="h-10 md:h-8">
-              <TabsTrigger value="all" class="text-sm md:text-xs px-4 md:px-2.5">Tümü</TabsTrigger>
-              <TabsTrigger value="pending" class="text-sm md:text-xs px-4 md:px-2.5">Beklemede</TabsTrigger>
-              <TabsTrigger value="processing" class="text-sm md:text-xs px-4 md:px-2.5">İşleniyor</TabsTrigger>
-              <TabsTrigger value="completed" class="text-sm md:text-xs px-4 md:px-2.5">Tamamlandı</TabsTrigger>
+            <TabsList class="h-10">
+              <TabsTrigger value="all" class="text-sm px-4">Tümü</TabsTrigger>
+              <TabsTrigger value="pending" class="text-sm px-4">Beklemede</TabsTrigger>
+              <TabsTrigger value="processing" class="text-sm px-4">İşleniyor</TabsTrigger>
+              <TabsTrigger value="completed" class="text-sm px-4">Tamamlandı</TabsTrigger>
             </TabsList>
           </Tabs>
 
           <!-- Sync Filter (AFAS only) -->
           <Tabs v-if="hasAfas" v-model="syncFilter">
-            <TabsList class="h-10 md:h-8">
-              <TabsTrigger value="all" class="text-sm md:text-xs px-4 md:px-2.5">Tümü</TabsTrigger>
-              <TabsTrigger value="unsynced" class="text-sm md:text-xs px-4 md:px-2.5 gap-1">
-                <CloudOff class="h-4 w-4 md:h-3.5 md:w-3.5" />
+            <TabsList class="h-10">
+              <TabsTrigger value="all" class="text-sm px-4">Tümü</TabsTrigger>
+              <TabsTrigger value="unsynced" class="text-sm px-4 gap-2">
+                <CloudOff class="h-5 w-5" />
                 Bekliyor
               </TabsTrigger>
-              <TabsTrigger value="synced" class="text-sm md:text-xs px-4 md:px-2.5 gap-1">
-                <Cloud class="h-4 w-4 md:h-3.5 md:w-3.5" />
+              <TabsTrigger value="synced" class="text-sm px-4 gap-2">
+                <Cloud class="h-5 w-5" />
                 Gönderildi
               </TabsTrigger>
             </TabsList>
@@ -47,107 +47,107 @@
         <!-- Bulk Selection Toolbar (AFAS only) -->
         <div
           v-if="hasAfas && selectedCount > 0"
-          class="flex items-center gap-3 md:gap-2 p-3 md:p-2 rounded-lg bg-muted border mb-4 md:mb-3"
+          class="flex items-center gap-3 p-3 rounded-lg bg-muted border mb-4"
         >
           <Checkbox
             :checked="allSelected"
             @update:checked="toggleSelectAll"
           />
-          <span class="text-sm md:text-xs font-medium">{{ selectedCount }} seçili</span>
+          <span class="text-sm font-medium">{{ selectedCount }} seçili</span>
           <div class="flex-1" />
           <Button
             variant="ghost"
             size="sm"
-            class="h-8 md:h-7 text-xs md:text-[10px]"
+            class="h-8 text-xs"
             @click="selectAllUnsynced"
           >
             Gönderilmemişleri Seç
           </Button>
           <Button
             size="sm"
-            class="h-8 md:h-7 text-xs md:text-[10px] gap-1.5"
+            class="h-8 text-xs gap-1.5"
             :disabled="isBulkSyncing"
             @click="handleBulkSync"
           >
-            <Loader2 v-if="isBulkSyncing" class="h-3.5 w-3.5 md:h-3 md:w-3 animate-spin" />
-            <Cloud v-else class="h-3.5 w-3.5 md:h-3 md:w-3" />
+            <Loader2 v-if="isBulkSyncing" class="h-4 w-4 animate-spin" />
+            <Cloud v-else class="h-4 w-4" />
             {{ isBulkSyncing ? `${bulkSyncProgress.current}/${bulkSyncProgress.total}` : "AFAS'a Gönder" }}
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            class="h-8 w-8 md:h-7 md:w-7"
+            class="h-8 w-8"
             @click="clearSelection"
           >
-            <X class="h-4 w-4 md:h-3.5 md:w-3.5" />
+            <X class="h-4 w-4" />
           </Button>
         </div>
 
         <!-- Loading -->
         <div v-if="isLoading && isInitialLoad" class="py-12 flex items-center justify-center">
-          <Loader2 class="h-8 w-8 md:h-6 md:w-6 animate-spin text-muted-foreground" />
+          <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
 
         <!-- Empty State -->
         <div v-else-if="orders.length === 0" class="py-12 text-center">
-          <Package class="h-12 w-12 md:h-10 md:w-10 text-muted-foreground/30 mx-auto mb-3" />
-          <p class="text-sm md:text-xs text-muted-foreground">Henüz sipariş yok</p>
+          <Package class="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+          <p class="text-sm text-muted-foreground">Henüz sipariş yok</p>
         </div>
 
         <!-- No Results (after filter) -->
         <div v-else-if="filteredOrders.length === 0" class="py-12 text-center">
-          <Search class="h-12 w-12 md:h-10 md:w-10 text-muted-foreground/30 mx-auto mb-3" />
-          <p class="text-sm md:text-xs text-muted-foreground">Sonuç bulunamadı</p>
+          <Search class="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+          <p class="text-sm text-muted-foreground">Sonuç bulunamadı</p>
         </div>
 
         <!-- Orders Grid -->
         <div v-else>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-2">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             <button
               v-for="order in filteredOrders"
               :key="order.id"
-              class="flex items-center gap-3 md:gap-2 p-4 md:p-3 rounded-xl md:rounded-lg border bg-card text-left hover:bg-accent active:scale-[0.99] transition-all shadow-sm"
+              class="flex items-center gap-3 p-4 rounded-xl border bg-card text-left hover:bg-accent active:scale-[0.99] transition-all shadow-sm"
               @click="viewOrder(order)"
             >
               <!-- Checkbox (AFAS only) -->
               <Checkbox
                 v-if="hasAfas"
                 :checked="selectedOrders.has(order.id)"
-                class="h-5 w-5 md:h-4 md:w-4 flex-shrink-0"
+                class="h-5 w-5 flex-shrink-0"
                 @click.stop
                 @update:checked="toggleOrderSelection(order.id)"
               />
 
               <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 md:gap-1.5 mb-1 flex-wrap">
-                  <span class="text-sm md:text-xs font-semibold">{{ order.order_number }}</span>
-                  <Badge variant="secondary" class="text-xs md:text-[10px]">
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                  <span class="text-sm font-semibold">{{ order.order_number }}</span>
+                  <Badge variant="secondary" class="text-xs">
                     {{ formatStatus(order.status) }}
                   </Badge>
                   <!-- AFAS Sync Badge -->
                   <template v-if="hasAfas">
-                    <Badge v-if="order.afas_synced" variant="outline" class="gap-1 text-xs md:text-[10px]">
-                      <Cloud class="h-3 w-3 md:h-2.5 md:w-2.5" />
+                    <Badge v-if="order.afas_synced" variant="outline" class="gap-1 text-xs">
+                      <Cloud class="h-3 w-3" />
                       Gönderildi
                     </Badge>
-                    <Badge v-else variant="outline" class="gap-1 text-xs md:text-[10px] text-amber-600">
-                      <CloudOff class="h-3 w-3 md:h-2.5 md:w-2.5" />
+                    <Badge v-else variant="outline" class="gap-1 text-xs text-amber-600">
+                      <CloudOff class="h-3 w-3" />
                       Bekliyor
                     </Badge>
                   </template>
                 </div>
-                <p class="text-sm md:text-xs text-muted-foreground truncate">
+                <p class="text-sm text-muted-foreground truncate">
                   {{ order.customer?.company_name || 'Bilinmeyen Müşteri' }}
                 </p>
                 <div class="flex items-center justify-between mt-1">
-                  <p class="text-xs md:text-[10px] text-muted-foreground">
+                  <p class="text-xs text-muted-foreground">
                     {{ formatDate(order.created_at) }}
                   </p>
-                  <p class="text-sm md:text-xs font-semibold text-primary">{{ formatPrice(order.total) }}</p>
+                  <p class="text-sm font-semibold text-primary">{{ formatPrice(order.total) }}</p>
                 </div>
               </div>
 
-              <ChevronRight class="h-5 w-5 md:h-4 md:w-4 text-muted-foreground flex-shrink-0" />
+              <ChevronRight class="h-5 w-5 text-muted-foreground flex-shrink-0" />
             </button>
           </div>
 
@@ -171,48 +171,48 @@
     <Sheet :open="showOrderDetail" @update:open="showOrderDetail = $event">
       <SheetContent side="right" class="w-full sm:max-w-md flex flex-col p-0">
         <!-- Header -->
-        <SheetHeader class="p-4 md:p-3 border-b">
-          <SheetTitle class="text-base md:text-sm">{{ orderDetail?.order_number }}</SheetTitle>
+        <SheetHeader class="p-4 border-b">
+          <SheetTitle class="text-base">{{ orderDetail?.order_number }}</SheetTitle>
           <div class="flex items-center gap-2">
-            <Badge variant="secondary" class="text-xs md:text-[10px]">
+            <Badge variant="secondary" class="text-xs">
               {{ formatStatus(orderDetail?.status) }}
             </Badge>
-            <span class="text-sm md:text-xs text-muted-foreground">{{ formatDate(orderDetail?.created_at) }}</span>
+            <span class="text-sm text-muted-foreground">{{ formatDate(orderDetail?.created_at) }}</span>
           </div>
         </SheetHeader>
 
         <!-- Scrollable Content -->
-        <div class="flex-1 overflow-y-auto p-4 md:p-3 space-y-4 md:space-y-3">
+        <div class="flex-1 overflow-y-auto p-4 space-y-4">
           <!-- Customer -->
-          <div class="flex items-center gap-3 md:gap-2 p-3 md:p-2.5 rounded-lg bg-muted/50">
-            <Avatar class="h-10 w-10 md:h-9 md:w-9">
-              <AvatarFallback class="text-sm md:text-xs font-semibold bg-zinc-600 text-white">
+          <div class="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+            <Avatar class="h-10 w-10">
+              <AvatarFallback class="text-sm font-semibold bg-zinc-600 text-white">
                 {{ orderDetail?.customer ? getInitials(orderDetail.customer.company_name) : '' }}
               </AvatarFallback>
             </Avatar>
             <div class="flex-1 min-w-0">
-              <p class="text-sm md:text-xs font-semibold truncate">{{ orderDetail?.customer?.company_name }}</p>
-              <p class="text-sm md:text-xs text-muted-foreground truncate">{{ orderDetail?.customer?.contact_name }}</p>
+              <p class="text-sm font-semibold truncate">{{ orderDetail?.customer?.company_name }}</p>
+              <p class="text-sm text-muted-foreground truncate">{{ orderDetail?.customer?.contact_name }}</p>
             </div>
           </div>
 
           <!-- Items -->
-          <div class="space-y-2 md:space-y-1.5">
-            <h3 class="text-xs md:text-[10px] font-medium text-muted-foreground uppercase">Ürünler</h3>
-            <div v-if="isLoadingDetail" class="py-8 md:py-6 flex items-center justify-center">
-              <Loader2 class="h-5 w-5 md:h-4 md:w-4 animate-spin text-muted-foreground" />
+          <div class="space-y-2">
+            <h3 class="text-xs font-medium text-muted-foreground uppercase">Ürünler</h3>
+            <div v-if="isLoadingDetail" class="py-8 flex items-center justify-center">
+              <Loader2 class="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-            <div v-else-if="!orderDetailItems?.length" class="py-8 md:py-6 text-center">
-              <p class="text-sm md:text-xs text-muted-foreground">Ürün bulunamadı</p>
+            <div v-else-if="!orderDetailItems?.length" class="py-8 text-center">
+              <p class="text-sm text-muted-foreground">Ürün bulunamadı</p>
             </div>
             <div
               v-else
               v-for="item in orderDetailItems"
               :key="item.id"
-              class="flex gap-3 md:gap-2 p-3 md:p-2.5 rounded-lg bg-muted/50"
+              class="flex gap-3 p-3 rounded-lg bg-muted/50"
             >
               <!-- Product Image -->
-              <div class="w-14 h-14 md:w-10 md:h-10 bg-muted rounded-lg overflow-hidden flex-shrink-0">
+              <div class="w-14 h-14 bg-muted rounded-lg overflow-hidden flex-shrink-0">
                 <img
                   v-if="item.product?.image_url"
                   :src="item.product.image_url"
@@ -220,70 +220,86 @@
                   class="w-full h-full object-cover"
                 />
                 <div v-else class="w-full h-full flex items-center justify-center">
-                  <ImageIcon class="h-6 w-6 md:h-5 md:w-5 text-muted-foreground/30" />
+                  <ImageIcon class="h-6 w-6 text-muted-foreground/30" />
                 </div>
               </div>
 
               <!-- Product Info -->
               <div class="flex-1 min-w-0">
-                <p class="text-sm md:text-xs font-medium text-foreground leading-snug line-clamp-2">{{ item.product?.name || 'Ürün' }}</p>
+                <div class="flex items-center gap-1.5">
+                  <p class="text-sm font-medium text-foreground leading-snug line-clamp-2">{{ item.product?.name || 'Ürün' }}</p>
+                  <!-- Backorder Badge -->
+                  <span
+                    v-if="item.allow_backorder && item.availability_status === 'backorder'"
+                    class="bg-amber-500 text-white text-[8px] font-bold px-1 py-0.5 rounded flex-shrink-0"
+                  >
+                    Stoğa Bağlı
+                  </span>
+                  <!-- Preorder Badge -->
+                  <span
+                    v-if="item.is_preorder && item.availability_status === 'preorder'"
+                    class="bg-blue-500 text-white text-[8px] font-bold px-1 py-0.5 rounded flex-shrink-0"
+                  >
+                    Ön Sipariş
+                  </span>
+                </div>
                 <div class="flex items-baseline flex-wrap gap-x-1.5 gap-y-0.5 mt-0.5">
-                  <span class="text-sm md:text-xs font-semibold text-primary">{{ formatPrice(item.unit_price) }}</span>
+                  <span class="text-sm font-semibold text-primary">{{ formatPrice(item.unit_price) }}</span>
                   <span
                     v-if="item.original_price && item.original_price > item.unit_price"
-                    class="text-xs md:text-[10px] text-muted-foreground/70 line-through"
+                    class="text-xs text-muted-foreground/70 line-through"
                   >
                     {{ formatPrice(item.original_price) }}
                   </span>
-                  <span class="text-xs md:text-[10px] text-muted-foreground">/{{ item.unit_type === 'box' ? 'koli' : 'adet' }}</span>
+                  <span class="text-xs text-muted-foreground">/{{ item.unit_type === 'box' ? 'koli' : 'adet' }}</span>
                   <span
                     v-if="item.original_price && item.original_price > item.unit_price"
-                    class="bg-destructive text-destructive-foreground text-[10px] md:text-[9px] font-bold px-1.5 py-0.5 rounded"
+                    class="bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded"
                   >
                     -{{ Math.round(((item.original_price - item.unit_price) / item.original_price) * 100) }}%
                   </span>
                 </div>
                 <!-- Piece price for boxes -->
-                <p v-if="item.unit_type === 'box' && (item.pieces_per_box || item.product?.pieces_per_box) > 1" class="text-xs md:text-[10px] text-muted-foreground mt-0.5">
+                <p v-if="item.unit_type === 'box' && (item.pieces_per_box || item.product?.pieces_per_box) > 1" class="text-xs text-muted-foreground mt-0.5">
                   {{ formatPrice(item.unit_price / (item.pieces_per_box || item.product?.pieces_per_box)) }}/adet
                 </p>
                 <div class="flex items-center justify-between mt-1">
-                  <span class="text-xs md:text-[10px] text-muted-foreground">
+                  <span class="text-xs text-muted-foreground">
                     {{ item.quantity_ordered }} {{ item.unit_type === 'box' ? 'koli' : 'adet' }}
                     <template v-if="item.unit_type === 'box' && (item.pieces_per_box || item.product?.pieces_per_box) > 1">
                       ({{ item.quantity_ordered * (item.pieces_per_box || item.product?.pieces_per_box) }} adet)
                     </template>
                   </span>
-                  <span class="text-sm md:text-xs font-bold text-foreground">{{ formatPrice(item.line_total) }}</span>
+                  <span class="text-sm font-bold text-foreground">{{ formatPrice(item.line_total) }}</span>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Notes -->
-          <div v-if="orderDetail?.notes" class="p-3 md:p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-            <p class="text-sm md:text-xs text-amber-800 dark:text-amber-200">{{ orderDetail.notes }}</p>
+          <div v-if="orderDetail?.notes" class="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+            <p class="text-sm text-amber-800 dark:text-amber-200">{{ orderDetail.notes }}</p>
           </div>
         </div>
 
         <!-- Footer with Summary & Actions -->
-        <div class="border-t p-4 md:p-3 space-y-3 md:space-y-2 bg-muted/30">
+        <div class="border-t p-4 space-y-3 bg-muted/30">
           <!-- Summary -->
-          <div class="space-y-2 md:space-y-1.5">
-            <div class="flex justify-between text-sm md:text-xs">
+          <div class="space-y-2">
+            <div class="flex justify-between text-sm">
               <span class="text-muted-foreground">Ara Toplam</span>
               <span>{{ formatPrice(orderDetail?.subtotal ?? 0) }}</span>
             </div>
-            <div v-if="(orderDetail?.discount_total ?? 0) > 0" class="flex justify-between text-sm md:text-xs">
+            <div v-if="(orderDetail?.discount_total ?? 0) > 0" class="flex justify-between text-sm">
               <span class="text-muted-foreground">İndirim</span>
               <span class="text-green-600">-{{ formatPrice(orderDetail?.discount_total ?? 0) }}</span>
             </div>
-            <div v-if="(orderDetail?.vat_total ?? 0) > 0" class="flex justify-between text-sm md:text-xs">
+            <div v-if="(orderDetail?.vat_total ?? 0) > 0" class="flex justify-between text-sm">
               <span class="text-muted-foreground">KDV</span>
               <span>{{ formatPrice(orderDetail?.vat_total ?? 0) }}</span>
             </div>
             <Separator />
-            <div class="flex justify-between text-base md:text-sm font-bold">
+            <div class="flex justify-between text-base font-bold">
               <span>Toplam</span>
               <span class="text-primary">{{ formatPrice(orderDetail?.total ?? 0) }}</span>
             </div>
@@ -291,26 +307,26 @@
 
           <!-- Actions -->
           <div class="flex items-center gap-2">
-            <Button variant="outline" class="flex-1 h-10 md:h-8 text-sm md:text-xs gap-1.5" @click="handlePrint">
-              <Printer class="h-4 w-4 md:h-3.5 md:w-3.5" />
+            <Button variant="outline" class="flex-1 h-10 text-sm gap-1.5" @click="handlePrint">
+              <Printer class="h-4 w-4" />
               Yazdır
             </Button>
-            <Button variant="outline" class="flex-1 h-10 md:h-8 text-sm md:text-xs gap-1.5" @click="handleShare">
-              <Share2 class="h-4 w-4 md:h-3.5 md:w-3.5" />
+            <Button variant="outline" class="flex-1 h-10 text-sm gap-1.5" @click="handleShare">
+              <Share2 class="h-4 w-4" />
               Paylaş
             </Button>
-            <Button variant="outline" class="flex-1 h-10 md:h-8 text-sm md:text-xs gap-1.5" @click="handleReorder">
-              <RotateCcw class="h-4 w-4 md:h-3.5 md:w-3.5" />
+            <Button variant="outline" class="flex-1 h-10 text-sm gap-1.5" @click="handleReorder">
+              <RotateCcw class="h-4 w-4" />
               Tekrarla
             </Button>
           </div>
-          <Button variant="outline" class="w-full h-10 md:h-8 text-sm md:text-xs gap-1.5" @click="goToOrderDetail">
-            <ExternalLink class="h-4 w-4 md:h-3.5 md:w-3.5" />
+          <Button variant="outline" class="w-full h-10 text-sm gap-1.5" @click="goToOrderDetail">
+            <ExternalLink class="h-4 w-4" />
             Detay Sayfası
           </Button>
-          <Button v-if="hasAfas && !orderDetail?.afas_synced" class="w-full h-11 md:h-9 text-sm md:text-xs gap-1.5" :disabled="isSyncing" @click="handleSyncToAfas">
-            <Loader2 v-if="isSyncing" class="h-4 w-4 md:h-3.5 md:w-3.5 animate-spin" />
-            <Cloud v-else class="h-4 w-4 md:h-3.5 md:w-3.5" />
+          <Button v-if="hasAfas && !orderDetail?.afas_synced" class="w-full h-11 text-sm gap-1.5" :disabled="isSyncing" @click="handleSyncToAfas">
+            <Loader2 v-if="isSyncing" class="h-4 w-4 animate-spin" />
+            <Cloud v-else class="h-4 w-4" />
             AFAS'a Gönder
           </Button>
         </div>

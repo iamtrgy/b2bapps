@@ -115,6 +115,10 @@ export const useCartStore = defineStore('cart', () => {
         allow_broken_case: product.allow_broken_case,
         broken_case_piece_price: product.broken_case_piece_price,
         box_price: product.box_price,
+        // Availability status
+        availability_status: product.availability_status,
+        allow_backorder: product.allow_backorder,
+        is_preorder: product.is_preorder,
       })
     }
   }

@@ -2,106 +2,184 @@
   <AppLayout>
     <div class="flex-1 flex flex-col md:flex-row overflow-hidden h-full min-h-0">
       <!-- Products Panel -->
-      <div class="flex-1 flex flex-col bg-muted/30 min-w-0 min-h-0">
-        <!-- Customer & Search (only when customer selected) -->
-        <div v-if="selectedCustomer" class="p-4 md:p-3 bg-background border-b space-y-3 md:space-y-2">
-          <!-- Selected Customer -->
-          <div class="flex items-center gap-3 md:gap-2">
-            <button
-              type="button"
-              class="flex items-center gap-3 md:gap-2 flex-1 min-w-0 text-left"
-              @click="openCustomerDetail"
-            >
-              <Avatar class="h-11 w-11 md:h-9 md:w-9">
-                <AvatarFallback :class="tierColors[selectedCustomer.customer_tier]" class="text-sm md:text-xs font-semibold">
-                  {{ getInitials(selectedCustomer.company_name) }}
-                </AvatarFallback>
-              </Avatar>
-              <div class="flex-1 min-w-0">
-                <p class="font-semibold text-sm md:text-xs text-foreground truncate">{{ selectedCustomer.company_name }}</p>
-                <p class="text-xs md:text-[10px] text-muted-foreground truncate">{{ selectedCustomer.contact_name }}</p>
-              </div>
-            </button>
-            <Button variant="ghost" size="sm" @click="clearCustomer">
-              <X class="h-5 w-5 md:h-4 md:w-4" />
-            </Button>
+      <div class="flex-1 flex flex-col bg-background min-w-0 min-h-0">
+        <!-- Header (only when customer selected) -->
+        <div v-if="selectedCustomer" class="bg-card border-b">
+          <!-- Top Bar: Customer & Search -->
+          <div class="flex items-center gap-3 p-3">
+            <!-- Selected Customer Pill -->
+            <div class="flex items-center gap-1 px-2 py-1.5 bg-muted rounded-lg">
+              <button
+                type="button"
+                class="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                @click="openCustomerDetail"
+              >
+                <Avatar class="h-7 w-7">
+                  <AvatarFallback :class="tierColors[selectedCustomer.customer_tier]" class="text-[10px] font-semibold">
+                    {{ getInitials(selectedCustomer.company_name) }}
+                  </AvatarFallback>
+                </Avatar>
+                <span class="text-sm font-medium text-foreground truncate max-w-[100px] hidden sm:block">
+                  {{ selectedCustomer.company_name }}
+                </span>
+              </button>
+              <button
+                type="button"
+                class="p-1 rounded hover:bg-background/50 transition-colors"
+                @click="clearCustomer"
+              >
+                <X class="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            </div>
+
+            <!-- Search -->
+            <div class="relative flex-1">
+              <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                v-model="searchQuery"
+                type="text"
+                placeholder="Ürün ara..."
+                class="pl-9 pr-10 h-10 text-sm bg-muted border-0"
+                @input="handleSearchInput"
+                @keyup.enter="handleSearch(searchQuery)"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                class="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                @click="showScanner = true"
+              >
+                <QrCode class="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
-          <!-- Search -->
-          <div class="relative">
-            <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 md:h-4 md:w-4 text-muted-foreground" />
-            <Input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Ürün adı, SKU veya barkod ile ara..."
-              class="pl-10 pr-12 h-11 md:h-9 text-sm md:text-xs"
-              @input="handleSearchInput"
-              @keyup.enter="handleSearch(searchQuery)"
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              class="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 md:h-7 md:w-7"
-              @click="showScanner = true"
-            >
-              <QrCode class="h-5 w-5 md:h-4 md:w-4" />
-            </Button>
-          </div>
+          <!-- Category Tabs -->
+          <div class="px-3 pb-3">
+            <div class="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+              <!-- Quick Filters -->
+              <button
+                type="button"
+                class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors"
+                :class="activeCategoryTab === 'best-sellers'
+                  ? 'bg-foreground text-background'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'"
+                @click="handleCategorySelect('best-sellers')"
+              >
+                <TrendingUp class="h-5 w-5" />
+                Çok Satanlar
+              </button>
 
-          <!-- Quick Tabs -->
-          <Tabs :model-value="activeTab" @update:model-value="handleTabChange($event as any)">
-            <TabsList class="h-10 md:h-8">
-              <TabsTrigger v-for="tab in tabs" :key="tab.id" :value="tab.id" class="text-sm md:text-xs px-4 md:px-2.5">
-                {{ tab.label }}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+              <button
+                type="button"
+                class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors"
+                :class="activeCategoryTab === 'favorites'
+                  ? 'bg-foreground text-background'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'"
+                @click="handleCategorySelect('favorites')"
+              >
+                <Heart class="h-5 w-5" />
+                Favoriler
+              </button>
+
+              <button
+                type="button"
+                class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors"
+                :class="activeCategoryTab === 'discounted'
+                  ? 'bg-foreground text-background'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'"
+                @click="handleCategorySelect('discounted')"
+              >
+                <Percent class="h-5 w-5" />
+                İndirimli
+              </button>
+
+              <!-- Divider -->
+              <div class="w-px bg-border self-stretch my-1" />
+
+              <!-- All Products Tab -->
+              <button
+                type="button"
+                class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors"
+                :class="activeCategoryTab === 'all'
+                  ? 'bg-foreground text-background'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'"
+                @click="handleCategorySelect('all')"
+              >
+                Tümü
+              </button>
+
+              <!-- Category Tabs -->
+              <button
+                v-for="category in categoryStore.categories"
+                :key="category.id"
+                type="button"
+                class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors"
+                :class="activeCategoryTab === category.id
+                  ? 'bg-foreground text-background'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'"
+                @click="handleCategorySelect(category.id)"
+              >
+                {{ category.name }}
+                <span
+                  class="text-xs"
+                  :class="activeCategoryTab === category.id ? 'opacity-60' : 'opacity-50'"
+                >
+                  {{ category.product_count }}
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Product Grid / Customer List -->
-        <div class="flex-1 overflow-y-auto p-4 md:p-3">
+        <div
+          ref="productGridRef"
+          class="flex-1 overflow-y-auto p-4 md:p-3"
+          @scroll="handleProductScroll"
+        >
           <!-- Customer Selection Grid -->
           <div v-if="!selectedCustomer">
-            <h2 class="text-lg md:text-base font-semibold mb-4 md:mb-3">Müşteri Seçin</h2>
+            <h2 class="text-lg font-semibold mb-4">Müşteri Seçin</h2>
 
             <!-- Customer Search -->
-            <div class="relative mb-4 md:mb-3">
-              <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 md:h-4 md:w-4 text-muted-foreground" />
+            <div class="relative mb-4">
+              <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 v-model="customerSearchQuery"
                 type="text"
                 placeholder="Müşteri ara..."
-                class="pl-10 h-11 md:h-9 text-sm md:text-xs"
+                class="pl-10 h-11 text-sm"
                 @input="handleCustomerSearch"
               />
             </div>
 
             <div v-if="customerStore.isLoading" class="flex items-center justify-center py-12">
-              <Loader2 class="h-8 w-8 md:h-6 md:w-6 animate-spin text-muted-foreground" />
+              <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
 
             <div v-else-if="customerStore.customers.length === 0" class="text-center py-12">
-              <Users class="h-12 w-12 md:h-10 md:w-10 text-muted-foreground/30 mx-auto mb-3" />
-              <p class="text-sm md:text-xs text-muted-foreground">Müşteri bulunamadı</p>
+              <Users class="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+              <p class="text-sm text-muted-foreground">Müşteri bulunamadı</p>
             </div>
 
-            <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-2">
+            <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               <button
                 v-for="customer in customerStore.customers"
                 :key="customer.id"
-                class="flex items-center gap-3 md:gap-2 p-4 md:p-3 rounded-xl md:rounded-lg border bg-card text-left hover:bg-accent active:scale-[0.99] transition-all"
+                class="flex items-center gap-3 p-4 rounded-xl border bg-card text-left hover:bg-accent active:scale-[0.99] transition-all"
                 @click="handleCustomerSelect(customer)"
               >
-                <Avatar class="h-11 w-11 md:h-9 md:w-9">
-                  <AvatarFallback :class="tierColors[customer.customer_tier]" class="text-sm md:text-xs font-semibold">
+                <Avatar class="h-11 w-11">
+                  <AvatarFallback :class="tierColors[customer.customer_tier]" class="text-sm font-semibold">
                     {{ getInitials(customer.company_name) }}
                   </AvatarFallback>
                 </Avatar>
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm md:text-xs font-semibold truncate">{{ customer.company_name }}</p>
-                  <p class="text-xs md:text-[10px] text-muted-foreground truncate">{{ customer.shipping_address?.city || customer.billing_address?.city || '-' }}</p>
+                  <p class="text-sm font-semibold truncate">{{ customer.company_name }}</p>
+                  <p class="text-xs text-muted-foreground truncate">{{ customer.shipping_address?.city || customer.billing_address?.city || '-' }}</p>
                 </div>
-                <Badge variant="secondary" :class="['text-xs md:text-[10px] capitalize', TIER_BADGE_COLORS[customer.customer_tier]]">
+                <Badge variant="secondary" :class="['text-xs capitalize', TIER_BADGE_COLORS[customer.customer_tier]]">
                   {{ customer.customer_tier }}
                 </Badge>
               </button>
@@ -126,9 +204,9 @@
 
           <template v-else>
             <!-- Results Count -->
-            <div class="flex items-center justify-between mb-3 md:mb-2">
-              <p class="text-sm md:text-xs text-muted-foreground">
-                {{ productStore.productCount }} ürün bulundu
+            <div class="flex items-center justify-between mb-3">
+              <p class="text-sm text-muted-foreground">
+                {{ productStore.productCount }}<span v-if="productStore.totalCount > 0"> / {{ productStore.totalCount }}</span> ürün
               </p>
             </div>
 
@@ -141,6 +219,14 @@
                 @quick-view="openProductDetail"
               />
             </div>
+
+            <!-- Load More Indicator -->
+            <div v-if="productStore.isLoadingMore" class="flex justify-center py-6">
+              <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+            <div v-else-if="productStore.hasMore" class="flex justify-center py-4">
+              <p class="text-xs text-muted-foreground">Daha fazla ürün için kaydırın</p>
+            </div>
           </template>
         </div>
       </div>
@@ -148,13 +234,14 @@
       <!-- Cart Panel - Desktop/Tablet (hidden on mobile) -->
       <div
         v-if="selectedCustomer"
-        class="hidden md:flex md:w-72 lg:w-80 xl:w-96 bg-background border-l flex-col h-full min-h-0"
+        class="hidden md:flex md:w-80 lg:w-[340px] xl:w-[380px] bg-card border-l flex-col h-full min-h-0"
       >
         <!-- Cart Header -->
-        <div class="px-3 py-2 border-b flex items-center justify-between">
+        <div class="px-4 py-3 border-b flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-medium">Sepet</span>
-            <Badge v-if="cartStore.itemCount > 0" variant="secondary" class="h-5 px-1.5 text-xs">
+            <ShoppingCart class="h-4 w-4 text-muted-foreground" />
+            <span class="text-sm font-semibold">Sipariş Detayları</span>
+            <Badge v-if="cartStore.itemCount > 0" class="h-5 min-w-5 px-1.5 text-[10px] bg-primary text-primary-foreground">
               {{ cartStore.itemCount }}
             </Badge>
           </div>
@@ -162,7 +249,7 @@
             v-if="!cartStore.isEmpty"
             variant="ghost"
             size="sm"
-            class="h-7 text-xs text-muted-foreground hover:text-destructive"
+            class="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
             @click="showClearCartConfirm = true"
           >
             Temizle
@@ -170,9 +257,13 @@
         </div>
 
         <!-- Cart Items -->
-        <div class="flex-1 overflow-y-auto">
-          <div v-if="cartStore.isEmpty" class="h-full flex items-center justify-center p-4">
-            <p class="text-xs text-muted-foreground">Sepetiniz boş</p>
+        <div class="flex-1 overflow-y-auto px-3">
+          <div v-if="cartStore.isEmpty" class="h-full flex flex-col items-center justify-center p-4 text-center">
+            <div class="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-3">
+              <ShoppingCart class="h-7 w-7 text-muted-foreground/50" />
+            </div>
+            <p class="text-sm text-muted-foreground">Sepetiniz boş</p>
+            <p class="text-xs text-muted-foreground/70 mt-1">Ürün eklemek için tıklayın</p>
           </div>
 
           <div v-else>
@@ -228,8 +319,9 @@
           <SheetHeader class="px-4 py-3 border-b">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
-                <SheetTitle class="text-base">Sepet</SheetTitle>
-                <Badge v-if="cartStore.itemCount > 0" variant="secondary" class="h-5 px-1.5 text-xs">
+                <ShoppingCart class="h-4 w-4 text-muted-foreground" />
+                <SheetTitle class="text-base font-semibold">Sipariş Detayları</SheetTitle>
+                <Badge v-if="cartStore.itemCount > 0" class="h-5 min-w-5 px-1.5 text-[10px] bg-primary text-primary-foreground">
                   {{ cartStore.itemCount }}
                 </Badge>
               </div>
@@ -237,7 +329,7 @@
                 v-if="!cartStore.isEmpty"
                 variant="ghost"
                 size="sm"
-                class="h-8 text-xs text-muted-foreground hover:text-destructive"
+                class="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
                 @click="showClearCartConfirm = true"
               >
                 Temizle
@@ -246,12 +338,13 @@
           </SheetHeader>
 
           <!-- Cart Items -->
-          <div class="flex-1 overflow-y-auto">
-            <div v-if="cartStore.isEmpty" class="h-full flex items-center justify-center p-4">
-              <div class="text-center">
-                <ShoppingCart class="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                <p class="text-sm text-muted-foreground">Sepetiniz boş</p>
+          <div class="flex-1 overflow-y-auto px-3">
+            <div v-if="cartStore.isEmpty" class="h-full flex flex-col items-center justify-center p-4 text-center">
+              <div class="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-3">
+                <ShoppingCart class="h-7 w-7 text-muted-foreground/50" />
               </div>
+              <p class="text-sm text-muted-foreground">Sepetiniz boş</p>
+              <p class="text-xs text-muted-foreground/70 mt-1">Ürün eklemek için tıklayın</p>
             </div>
 
             <div v-else>
@@ -316,16 +409,17 @@
             <TabsTrigger value="orders">Siparişler ({{ customerDetail?.total_orders ?? 0 }})</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="info" class="space-y-4 max-h-64 overflow-y-auto">
+          <TabsContent value="info" class="space-y-4 max-h-80 overflow-y-auto">
+            <!-- Contact -->
             <div class="space-y-2">
               <h4 class="text-xs font-semibold text-muted-foreground uppercase">İletişim</h4>
               <div class="flex justify-between py-1">
                 <span class="text-sm text-muted-foreground">Ad</span>
-                <span class="text-sm font-medium">{{ customerDetail?.contact_name }}</span>
+                <span class="text-sm font-medium">{{ customerDetail?.contact_name || '-' }}</span>
               </div>
               <div class="flex justify-between py-1">
                 <span class="text-sm text-muted-foreground">E-posta</span>
-                <span class="text-sm font-medium">{{ customerDetail?.contact_email }}</span>
+                <span class="text-sm font-medium">{{ customerDetail?.contact_email || '-' }}</span>
               </div>
               <div class="flex justify-between py-1">
                 <span class="text-sm text-muted-foreground">Telefon</span>
@@ -335,6 +429,61 @@
 
             <Separator />
 
+            <!-- Address -->
+            <div v-if="customerDetail?.shipping_address || customerDetail?.billing_address" class="space-y-2">
+              <h4 class="text-xs font-semibold text-muted-foreground uppercase">Adres</h4>
+              <template v-if="customerDetail?.shipping_address">
+                <div class="flex justify-between py-1">
+                  <span class="text-sm text-muted-foreground">Şehir</span>
+                  <span class="text-sm font-medium">{{ customerDetail.shipping_address.city || '-' }}</span>
+                </div>
+                <div class="flex justify-between py-1">
+                  <span class="text-sm text-muted-foreground">Adres</span>
+                  <span class="text-sm font-medium text-right max-w-[200px]">{{ customerDetail.shipping_address.address || '-' }}</span>
+                </div>
+                <div class="flex justify-between py-1">
+                  <span class="text-sm text-muted-foreground">Posta Kodu</span>
+                  <span class="text-sm font-medium">{{ customerDetail.shipping_address.postal_code || '-' }}</span>
+                </div>
+              </template>
+              <template v-else-if="customerDetail?.billing_address">
+                <div class="flex justify-between py-1">
+                  <span class="text-sm text-muted-foreground">Şehir</span>
+                  <span class="text-sm font-medium">{{ customerDetail.billing_address.city || '-' }}</span>
+                </div>
+                <div class="flex justify-between py-1">
+                  <span class="text-sm text-muted-foreground">Adres</span>
+                  <span class="text-sm font-medium text-right max-w-[200px]">{{ customerDetail.billing_address.address || '-' }}</span>
+                </div>
+                <div class="flex justify-between py-1">
+                  <span class="text-sm text-muted-foreground">Posta Kodu</span>
+                  <span class="text-sm font-medium">{{ customerDetail.billing_address.postal_code || '-' }}</span>
+                </div>
+              </template>
+            </div>
+
+            <Separator v-if="customerDetail?.shipping_address || customerDetail?.billing_address" />
+
+            <!-- Credit Info -->
+            <div class="space-y-2">
+              <h4 class="text-xs font-semibold text-muted-foreground uppercase">Kredi Bilgisi</h4>
+              <div class="flex justify-between py-1">
+                <span class="text-sm text-muted-foreground">Kredi Limiti</span>
+                <span class="text-sm font-medium">{{ formatPrice(Number(customerDetail?.credit_limit) || 0) }}</span>
+              </div>
+              <div class="flex justify-between py-1">
+                <span class="text-sm text-muted-foreground">Mevcut Bakiye</span>
+                <span class="text-sm font-medium">{{ formatPrice(Number(customerDetail?.current_balance) || 0) }}</span>
+              </div>
+              <div class="flex justify-between py-1">
+                <span class="text-sm text-muted-foreground">Kullanılabilir</span>
+                <span class="text-sm font-medium text-green-600">{{ formatPrice(Number(customerDetail?.available_credit) || 0) }}</span>
+              </div>
+            </div>
+
+            <Separator />
+
+            <!-- Statistics -->
             <div class="space-y-2">
               <h4 class="text-xs font-semibold text-muted-foreground uppercase">İstatistikler</h4>
               <div class="flex justify-between py-1">
@@ -344,6 +493,10 @@
               <div class="flex justify-between py-1">
                 <span class="text-sm text-muted-foreground">Toplam Harcama</span>
                 <span class="text-sm font-medium text-green-600">{{ formatPrice(customerDetail?.total_spent ?? 0) }}</span>
+              </div>
+              <div v-if="customerDetail?.vat_number" class="flex justify-between py-1">
+                <span class="text-sm text-muted-foreground">KDV No</span>
+                <span class="text-sm font-medium">{{ customerDetail.vat_number }}</span>
               </div>
             </div>
           </TabsContent>
@@ -421,6 +574,80 @@
       </DialogContent>
     </Dialog>
 
+    <!-- Out of Stock Modal -->
+    <Dialog v-model:open="showOutOfStockModal">
+      <DialogContent class="max-w-sm">
+        <DialogHeader>
+          <div class="mx-auto w-14 h-14 bg-amber-100 dark:bg-amber-950 rounded-full flex items-center justify-center mb-3">
+            <AlertTriangle class="h-7 w-7 text-amber-600" />
+          </div>
+          <DialogTitle class="text-center">Stokta Yok</DialogTitle>
+          <p class="text-sm text-muted-foreground text-center">
+            {{ outOfStockProduct?.name }}
+          </p>
+        </DialogHeader>
+
+        <p class="text-sm text-muted-foreground text-center">
+          Bu ürün şu anda stokta yok. Sepete eklemek için stoğa bağlı sipariş veya ön sipariş seçeneğini etkinleştirebilirsiniz.
+        </p>
+
+        <div class="space-y-2 mt-4">
+          <!-- Backorder Option -->
+          <button
+            type="button"
+            class="w-full flex items-center gap-3 p-4 rounded-lg border bg-card hover:bg-accent transition-colors text-left"
+            :disabled="isUpdatingAvailability"
+            @click="handleSetAvailability('backorder')"
+          >
+            <div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+              <Clock class="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold">Stoğa Bağlı</p>
+              <p class="text-xs text-muted-foreground">Şimdi sipariş kabul et, stok gelince gönder</p>
+            </div>
+            <ChevronRight class="h-5 w-5 text-muted-foreground flex-shrink-0" />
+          </button>
+
+          <!-- Preorder Option -->
+          <button
+            type="button"
+            class="w-full flex items-center gap-3 p-4 rounded-lg border bg-card hover:bg-accent transition-colors text-left"
+            :disabled="isUpdatingAvailability"
+            @click="handleSetAvailability('preorder')"
+          >
+            <div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+              <Package class="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold">Ön Sipariş</p>
+              <p class="text-xs text-muted-foreground">Yakında çıkacak ürün için sipariş kabul et</p>
+            </div>
+            <ChevronRight class="h-5 w-5 text-muted-foreground flex-shrink-0" />
+          </button>
+        </div>
+
+        <div class="pt-2">
+          <Button
+            variant="ghost"
+            class="w-full"
+            :disabled="isUpdatingAvailability"
+            @click="showOutOfStockModal = false"
+          >
+            İptal
+          </Button>
+        </div>
+
+        <!-- Loading overlay -->
+        <div
+          v-if="isUpdatingAvailability"
+          class="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg"
+        >
+          <Loader2 class="h-6 w-6 animate-spin" />
+        </div>
+      </DialogContent>
+    </Dialog>
+
     <!-- Product Detail Modal -->
     <Dialog v-model:open="showProductDetail">
       <DialogContent class="max-w-md">
@@ -472,11 +699,28 @@
             <span class="text-muted-foreground">Koli İçeriği</span>
             <span>{{ productDetail.pieces_per_box }} adet</span>
           </div>
-          <div class="flex justify-between text-sm">
+          <div class="flex justify-between text-sm items-center">
             <span class="text-muted-foreground">Stok Durumu</span>
-            <span :class="productDetail?.can_purchase ? 'text-green-600' : 'text-destructive'">
-              {{ productDetail?.can_purchase ? 'Stokta Var' : 'Stokta Yok' }}
-            </span>
+            <div class="flex items-center gap-2">
+              <span
+                v-if="productDetail?.availability_status === 'backorder'"
+                class="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded"
+              >
+                Stoğa Bağlı
+              </span>
+              <span
+                v-else-if="productDetail?.availability_status === 'preorder'"
+                class="bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded"
+              >
+                Ön Sipariş
+              </span>
+              <span
+                v-else
+                :class="productDetail?.availability_status === 'in_stock' || productDetail?.availability_status === 'low_stock' ? 'text-green-600' : 'text-destructive'"
+              >
+                {{ productDetail?.availability_status === 'in_stock' || productDetail?.availability_status === 'low_stock' ? 'Stokta Var' : 'Stokta Yok' }}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -568,6 +812,12 @@ import {
   ImageIcon,
   AlertTriangle,
   ShoppingCart,
+  TrendingUp,
+  Heart,
+  Percent,
+  Clock,
+  Package,
+  ChevronRight,
 } from 'lucide-vue-next'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import ProductCard from '@/components/pos/ProductCard.vue'
@@ -597,6 +847,7 @@ import {
 import { useCartStore } from '@/stores/cart'
 import { useProductStore } from '@/stores/products'
 import { useCustomerStore } from '@/stores/customer'
+import { useCategoryStore } from '@/stores/category'
 import { orderApi, customerApi, productApi } from '@/services/api'
 import type { Customer, Product } from '@/types'
 
@@ -605,6 +856,7 @@ const route = useRoute()
 const cartStore = useCartStore()
 const productStore = useProductStore()
 const customerStore = useCustomerStore()
+const categoryStore = useCategoryStore()
 
 // Import tier colors from constants for consistency
 import { TIER_COLORS, TIER_BADGE_COLORS } from '@/constants/customers'
@@ -629,7 +881,7 @@ function formatPrice(price: number): string {
 const selectedCustomer = ref<Customer | null>(null)
 const searchQuery = ref('')
 const customerSearchQuery = ref('')
-const activeTab = ref<'search' | 'best-sellers' | 'favorites' | 'discounted'>('search')
+const activeCategoryTab = ref<'search' | 'all' | 'best-sellers' | 'favorites' | 'discounted' | number>('best-sellers')
 const showScanner = ref(false)
 const showCustomerDetail = ref(false)
 const customerDetailTab = ref('info')
@@ -648,15 +900,53 @@ const showAddedToast = ref(false)
 const showUndoToast = ref(false)
 const showLowStockWarning = ref(false)
 const lowStockMessage = ref('')
+const productGridRef = ref<HTMLElement | null>(null)
 let addedToastTimeout: ReturnType<typeof setTimeout> | null = null
 let undoToastTimeout: ReturnType<typeof setTimeout> | null = null
 let lowStockTimeout: ReturnType<typeof setTimeout> | null = null
 
+// Out of stock modal
+const showOutOfStockModal = ref(false)
+const outOfStockProduct = ref<Product | null>(null)
+const isUpdatingAvailability = ref(false)
+
 const CUSTOMER_STORAGE_KEY = 'pos_selected_customer'
+
+// Infinite scroll handler
+function handleProductScroll(event: Event) {
+  const target = event.target as HTMLElement
+  const { scrollTop, scrollHeight, clientHeight } = target
+
+  // Load more when user is 200px from bottom
+  if (scrollHeight - scrollTop - clientHeight < 200) {
+    if (selectedCustomer.value && productStore.hasMore && !productStore.isLoadingMore) {
+      productStore.loadMore(selectedCustomer.value.id)
+    }
+  }
+}
 
 let barcodeBuffer = ''
 let barcodeTimeout: ReturnType<typeof setTimeout> | null = null
 const BARCODE_TIMEOUT = 100
+
+function handleCategorySelect(tab: 'all' | 'best-sellers' | 'favorites' | 'discounted' | number) {
+  activeCategoryTab.value = tab
+  searchQuery.value = ''
+
+  if (!selectedCustomer.value) return
+
+  if (tab === 'all') {
+    productStore.loadAll(selectedCustomer.value.id)
+  } else if (tab === 'best-sellers') {
+    productStore.loadBestSellers(selectedCustomer.value.id)
+  } else if (tab === 'favorites') {
+    productStore.loadFavorites(selectedCustomer.value.id)
+  } else if (tab === 'discounted') {
+    productStore.loadDiscounted(selectedCustomer.value.id)
+  } else {
+    productStore.loadByCategory(selectedCustomer.value.id, tab)
+  }
+}
 
 function saveCustomerToStorage(customer: Customer | null) {
   if (customer) {
@@ -678,13 +968,6 @@ function loadCustomerFromStorage(): Customer | null {
   return null
 }
 
-const tabs = [
-  { id: 'search', label: 'Ara' },
-  { id: 'best-sellers', label: 'Çok Satanlar' },
-  { id: 'favorites', label: 'Favoriler' },
-  { id: 'discounted', label: 'İndirimli' },
-] as const
-
 const canCheckout = computed(() => {
   return !!selectedCustomer.value && !cartStore.isEmpty
 })
@@ -692,8 +975,9 @@ const canCheckout = computed(() => {
 watch(selectedCustomer, (customer) => {
   if (customer) {
     cartStore.setCustomer(customer.id)
+    categoryStore.fetchCategories()
     productStore.loadBestSellers(customer.id)
-    activeTab.value = 'best-sellers'
+    activeCategoryTab.value = 'best-sellers'
   }
 })
 
@@ -760,33 +1044,22 @@ function handleSearchInput() {
 
 function handleSearch(query: string) {
   if (!selectedCustomer.value) return
-  activeTab.value = 'search'
+  activeCategoryTab.value = 'search'
   productStore.searchProducts(query, selectedCustomer.value.id)
 }
 
-function handleTabChange(tab: typeof activeTab.value) {
-  if (!selectedCustomer.value) return
-  activeTab.value = tab
-
-  switch (tab) {
-    case 'best-sellers':
-      productStore.loadBestSellers(selectedCustomer.value.id)
-      break
-    case 'favorites':
-      productStore.loadFavorites(selectedCustomer.value.id)
-      break
-    case 'discounted':
-      productStore.loadDiscounted(selectedCustomer.value.id)
-      break
-    case 'search':
-      if (searchQuery.value) {
-        productStore.searchProducts(searchQuery.value, selectedCustomer.value.id)
-      }
-      break
+function handleAddToCart(product: Product) {
+  // Check if product is out of stock and can't be purchased
+  if (!product.can_purchase) {
+    outOfStockProduct.value = product
+    showOutOfStockModal.value = true
+    return
   }
+
+  addProductToCart(product)
 }
 
-function handleAddToCart(product: Product) {
+function addProductToCart(product: Product) {
   // Default to box if product has multiple pieces per box
   const piecesPerBox = product.pieces_per_box || 1
   const unitType = piecesPerBox > 1 ? 'box' : 'piece'
@@ -824,6 +1097,56 @@ function handleAddToCart(product: Product) {
   addedToastTimeout = setTimeout(() => {
     showAddedToast.value = false
   }, 2000)
+}
+
+async function handleSetAvailability(type: 'backorder' | 'preorder') {
+  if (!outOfStockProduct.value) return
+
+  isUpdatingAvailability.value = true
+
+  try {
+    const result = await productApi.updateAvailability(outOfStockProduct.value.id, type)
+    console.log('Availability update result:', result)
+
+    if (result.success) {
+      // Update the product with new availability - it can now be purchased
+      const updatedProduct: Product = {
+        ...outOfStockProduct.value,
+        ...(result.product || {}),
+        // Ensure these are set even if API doesn't return them
+        can_purchase: result.product?.can_purchase ?? true,
+        allow_backorder: result.product?.allow_backorder ?? (type === 'backorder'),
+        is_preorder: result.product?.is_preorder ?? (type === 'preorder'),
+        availability_status: result.product?.availability_status ?? type,
+      }
+
+      productStore.updateProduct(updatedProduct)
+
+      // Close modal and add to cart
+      showOutOfStockModal.value = false
+      addProductToCart(updatedProduct)
+    } else {
+      console.error('API returned success: false', result)
+      // Show error toast
+      lowStockMessage.value = result.message || 'Güncelleme başarısız oldu'
+      showLowStockWarning.value = true
+      if (lowStockTimeout) clearTimeout(lowStockTimeout)
+      lowStockTimeout = setTimeout(() => {
+        showLowStockWarning.value = false
+      }, 3000)
+    }
+  } catch (error: any) {
+    console.error('Failed to update availability:', error)
+    // Show error toast
+    lowStockMessage.value = error.response?.data?.message || 'Bir hata oluştu'
+    showLowStockWarning.value = true
+    if (lowStockTimeout) clearTimeout(lowStockTimeout)
+    lowStockTimeout = setTimeout(() => {
+      showLowStockWarning.value = false
+    }, 3000)
+  } finally {
+    isUpdatingAvailability.value = false
+  }
 }
 
 function openProductDetail(product: Product) {
@@ -979,8 +1302,9 @@ onMounted(async () => {
   if (storedCustomer) {
     selectedCustomer.value = storedCustomer
     cartStore.setCustomer(storedCustomer.id)
+    categoryStore.fetchCategories()
     productStore.loadBestSellers(storedCustomer.id)
-    activeTab.value = 'best-sellers'
+    activeCategoryTab.value = 'best-sellers'
   }
 
   if (customerStore.customers.length === 0) {

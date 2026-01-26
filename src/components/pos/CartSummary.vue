@@ -1,67 +1,63 @@
 <template>
-  <div class="border-t p-4 md:p-3 safe-area-bottom">
-    <!-- Items Count -->
-    <div class="flex items-center justify-between mb-3 md:mb-2 pb-3 md:pb-2 border-b">
-      <span class="text-sm md:text-xs text-muted-foreground">{{ itemCount }} ürün</span>
-      <div class="text-sm md:text-xs text-muted-foreground">
-        <span v-if="boxCount > 0">{{ boxCount }} koli</span>
-        <span v-if="boxCount > 0 && pieceCount > 0"> · </span>
-        <span v-if="pieceCount > 0">{{ pieceCount }} adet</span>
-      </div>
-    </div>
-
+  <div class="border-t bg-muted/30 safe-area-bottom">
     <!-- Summary Lines -->
-    <div class="space-y-2.5 md:space-y-1.5 mb-4 md:mb-3">
-      <div class="flex justify-between text-base md:text-sm">
+    <div class="p-4 md:p-3 space-y-2">
+      <div class="flex justify-between text-sm">
         <span class="text-muted-foreground">Ara Toplam</span>
-        <span>{{ formatPrice(subtotal) }}</span>
+        <span class="font-medium">{{ formatPrice(subtotal) }}</span>
       </div>
-      <div v-if="discount > 0" class="flex justify-between text-base md:text-sm">
+      <div v-if="discount > 0" class="flex justify-between text-sm">
         <span class="text-muted-foreground">İndirim</span>
-        <span class="text-green-600">-{{ formatPrice(discount) }}</span>
+        <span class="font-medium text-green-600">-{{ formatPrice(discount) }}</span>
       </div>
       <template v-if="vatBreakdown.length > 0">
-        <div v-for="vat in vatBreakdown" :key="vat.rate" class="flex justify-between text-base md:text-sm">
+        <div v-for="vat in vatBreakdown" :key="vat.rate" class="flex justify-between text-sm">
           <span class="text-muted-foreground">KDV (%{{ vat.rate }})</span>
-          <span>{{ formatPrice(vat.amount) }}</span>
+          <span class="font-medium">{{ formatPrice(vat.amount) }}</span>
         </div>
       </template>
-      <Separator class="my-2 md:my-1.5" />
-      <div class="flex justify-between text-lg md:text-base font-bold">
-        <span>Toplam</span>
-        <span class="text-primary">{{ formatPrice(total) }}</span>
-      </div>
     </div>
 
-    <!-- Notes -->
-    <div class="mb-4 md:mb-3">
+    <!-- Total & Actions -->
+    <div class="p-4 md:p-3 pt-0 space-y-3">
+      <!-- Total -->
+      <div class="flex items-center justify-between pt-3 border-t">
+        <div>
+          <span class="text-sm text-muted-foreground">Toplam</span>
+          <p class="text-xs text-muted-foreground">
+            <span v-if="boxCount > 0">{{ boxCount }} koli</span>
+            <span v-if="boxCount > 0 && pieceCount > 0"> · </span>
+            <span v-if="pieceCount > 0">{{ pieceCount }} adet</span>
+          </p>
+        </div>
+        <span class="text-xl font-bold">{{ formatPrice(total) }}</span>
+      </div>
+
+      <!-- Notes -->
       <Input
         :model-value="notes"
         type="text"
         placeholder="Sipariş notları..."
-        class="h-10 md:h-8 text-sm md:text-xs"
+        class="h-10 md:h-9 text-sm"
         @update:model-value="$emit('update:notes', String($event ?? ''))"
       />
-    </div>
 
-    <!-- Checkout Button -->
-    <Button
-      variant="primary"
-      size="lg"
-      :disabled="!canCheckout || isSubmitting"
-      class="w-full md:h-9 md:text-sm"
-      @click="$emit('checkout')"
-    >
-      <Loader2 v-if="isSubmitting" class="h-5 w-5 md:h-4 md:w-4 mr-2 animate-spin" />
-      Sipariş Ver
-    </Button>
+      <!-- Checkout Button -->
+      <Button
+        :disabled="!canCheckout || isSubmitting"
+        class="w-full h-12 rounded-xl text-base font-medium"
+        @click="$emit('checkout')"
+      >
+        <Loader2 v-if="isSubmitting" class="h-5 w-5 mr-2 animate-spin" />
+        Sipariş Ver
+      </Button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 
 interface VatBreakdownItem {

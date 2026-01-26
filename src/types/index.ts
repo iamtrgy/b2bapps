@@ -62,6 +62,19 @@ export interface Customer {
   recent_orders?: CustomerRecentOrder[]
 }
 
+// Category types
+export interface Category {
+  id: number
+  name: string
+  slug: string
+  description?: string
+  image_url?: string | null
+  parent_id?: number | null
+  product_count: number
+  has_children?: boolean
+  children?: Category[]
+}
+
 // Product types
 export interface VatRate {
   id: number
@@ -102,10 +115,14 @@ export interface Product {
   broken_case_piece_price: number
   // VAT
   vat_rate: VatRate | null
-  // Stock
+  // Stock & Availability
   stock_quantity: number
-  availability_status: 'in_stock' | 'low_stock' | 'out_of_stock'
+  availability_status: 'in_stock' | 'low_stock' | 'out_of_stock' | 'backorder' | 'preorder'
+  availability_label?: string
+  availability_color?: string
   can_purchase: boolean
+  allow_backorder?: boolean
+  is_preorder?: boolean
   // Box/Case configuration
   boxes_per_case: number
   // MOQ
@@ -131,6 +148,10 @@ export interface CartItem {
   allow_broken_case?: boolean
   broken_case_piece_price?: number
   box_price?: number // Original box price for switching back
+  // Availability
+  availability_status?: 'in_stock' | 'low_stock' | 'out_of_stock' | 'backorder' | 'preorder'
+  allow_backorder?: boolean
+  is_preorder?: boolean
 }
 
 // Order types
@@ -154,6 +175,10 @@ export interface OrderItem {
   pieces_per_box?: number
   vat_rate: number
   line_total: number
+  // Availability (optional, if returned by API)
+  availability_status?: 'in_stock' | 'low_stock' | 'out_of_stock' | 'backorder' | 'preorder'
+  allow_backorder?: boolean
+  is_preorder?: boolean
 }
 
 export interface Order {

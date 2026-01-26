@@ -1,109 +1,85 @@
 <template>
-  <div class="px-3 py-2 md:px-2 md:py-1.5 border-b last:border-0 hover:bg-muted/30 transition-colors touch-manipulation">
-    <!-- Top Row: Image, Name, Remove -->
-    <div class="flex gap-3 md:gap-2 items-start">
+  <div>
+    <button
+      type="button"
+      class="flex items-start gap-3 py-4 border-b last:border-0 w-full text-left hover:bg-muted/50 -mx-3 px-3 transition-colors"
+      @click="openEditModal"
+    >
       <!-- Product Image -->
-      <button
-        type="button"
-        class="w-14 h-14 md:w-10 md:h-10 bg-muted rounded-lg overflow-hidden flex-shrink-0"
-        @click="openEditModal"
-      >
+      <div class="w-14 h-14 bg-white rounded-lg overflow-hidden flex-shrink-0 border">
         <img
           v-if="item.image_url"
           :src="item.image_url"
           :alt="item.name"
-          class="w-full h-full object-cover"
+          class="w-full h-full object-contain p-1"
         />
         <div v-else class="w-full h-full flex items-center justify-center">
-          <ImageIcon class="h-6 w-6 md:h-5 md:w-5 text-muted-foreground/30" />
+          <ImageIcon class="h-5 w-5 text-muted-foreground/30" />
         </div>
-      </button>
+      </div>
 
-      <!-- Product Info (clickable) -->
-      <button
-        type="button"
-        class="flex-1 min-w-0 text-left"
-        @click="openEditModal"
-      >
-        <p class="text-sm md:text-xs font-medium text-foreground leading-snug line-clamp-2">{{ item.name }}</p>
-        <div class="flex items-baseline flex-wrap gap-x-1.5 gap-y-0.5 mt-0.5">
-          <span class="text-sm md:text-xs font-semibold text-primary">{{ formatPrice(item.price) }}</span>
+      <!-- Product Info -->
+      <div class="flex-1 min-w-0">
+        <!-- Name & Badges -->
+        <div class="flex items-center gap-1.5">
+          <h4 class="text-sm font-semibold text-foreground line-clamp-1">{{ item.name }}</h4>
+          <!-- Backorder Badge -->
           <span
-            v-if="item.total_discount_percent > 0"
-            class="text-xs text-muted-foreground/70 line-through"
+            v-if="item.allow_backorder && item.availability_status === 'backorder'"
+            class="bg-amber-500 text-white text-[8px] font-bold px-1 py-0.5 rounded flex-shrink-0"
           >
-            {{ formatPrice(item.base_price) }}
+            Stoğa Bağlı
           </span>
-          <span class="text-xs text-muted-foreground">/{{ item.unit_type === 'box' ? 'koli' : 'adet' }}</span>
+          <!-- Preorder Badge -->
+          <span
+            v-if="item.is_preorder && item.availability_status === 'preorder'"
+            class="bg-blue-500 text-white text-[8px] font-bold px-1 py-0.5 rounded flex-shrink-0"
+          >
+            Ön Sipariş
+          </span>
+        </div>
+
+        <!-- Price & Quantity Row -->
+        <div class="flex items-center gap-2 mt-1">
+          <span class="text-sm font-bold text-foreground">{{ formatPrice(item.price) }}</span>
+          <span v-if="item.total_discount_percent > 0" class="text-xs text-muted-foreground line-through">
+            {{ formatPrice(item.base_price * (item.unit_type === 'box' ? item.pieces_per_box : 1)) }}
+          </span>
           <span
             v-if="item.total_discount_percent > 0"
-            class="bg-destructive text-destructive-foreground text-[10px] md:text-[9px] font-bold px-1.5 py-0.5 rounded"
+            class="bg-destructive text-white text-[10px] font-bold px-1.5 py-0.5 rounded"
           >
             -{{ Math.round(item.total_discount_percent) }}%
           </span>
+          <span class="text-sm text-muted-foreground ml-auto">× {{ item.quantity }}</span>
         </div>
-        <!-- Piece price for boxes -->
-        <p v-if="item.unit_type === 'box' && item.pieces_per_box > 1" class="text-xs text-muted-foreground mt-0.5 hidden md:block">
-          {{ formatPrice(item.price / item.pieces_per_box) }}/adet
-        </p>
-      </button>
 
-      <!-- Remove button -->
-      <button
-        type="button"
-        class="p-1.5 md:p-1 min-h-[36px] min-w-[36px] md:min-h-[28px] md:min-w-[28px] -mr-1 flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors flex-shrink-0 touch-manipulation"
-        @click="$emit('remove')"
-      >
-        <X class="h-4 w-4 md:h-3.5 md:w-3.5" />
-      </button>
-    </div>
-
-    <!-- Bottom Row: Quantity Controls and Total -->
-    <div class="flex items-center justify-between mt-2 md:mt-1 ml-[68px] md:ml-[48px]">
-      <div class="flex items-center bg-muted rounded-md">
-        <button
-          type="button"
-          class="p-2 md:p-1 min-h-[32px] min-w-[32px] md:min-h-[24px] md:min-w-[24px] flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-l-md disabled:opacity-50 transition-colors touch-manipulation"
-          :disabled="item.quantity <= 1"
-          @click="$emit('update', item.quantity - 1)"
-        >
-          <Minus class="h-4 w-4 md:h-3 md:w-3" />
-        </button>
-
-        <!-- Tap to edit quantity -->
-        <button
-          type="button"
-          class="w-10 md:w-8 h-8 md:h-6 text-center text-sm md:text-xs font-semibold hover:bg-background/50 transition-colors"
-          @click="openEditModal"
-        >
-          {{ item.quantity }}
-        </button>
-
-        <button
-          type="button"
-          class="p-2 md:p-1 min-h-[32px] min-w-[32px] md:min-h-[24px] md:min-w-[24px] flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background/50 rounded-r-md transition-colors touch-manipulation"
-          @click="$emit('update', item.quantity + 1)"
-        >
-          <Plus class="h-4 w-4 md:h-3 md:w-3" />
-        </button>
+        <!-- Unit Info -->
+        <div class="flex items-center gap-1.5 mt-0.5">
+          <span v-if="item.unit_type === 'piece'" class="bg-amber-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">
+            Tekli Adet
+          </span>
+          <span v-else class="text-xs text-muted-foreground">
+            Koli
+            <template v-if="item.pieces_per_box > 1">
+              • {{ item.pieces_per_box }} adet/koli
+            </template>
+          </span>
+        </div>
       </div>
-
-      <span class="text-sm md:text-xs font-bold text-foreground">
-        {{ formatPrice(item.price * item.quantity) }}
-      </span>
-    </div>
+    </button>
 
     <!-- Edit Modal -->
     <Dialog :open="showModal" @update:open="showModal = $event">
       <DialogContent class="sm:max-w-[400px] p-0 gap-0">
         <!-- Header with product info -->
-        <div class="flex gap-4 p-4 pr-14 border-b">
-          <div class="w-16 h-16 bg-muted rounded-lg overflow-hidden flex-shrink-0">
+        <div class="flex gap-4 p-5 pr-14 border-b">
+          <div class="w-20 h-20 bg-white rounded-xl overflow-hidden flex-shrink-0 border">
             <img
               v-if="item.image_url"
               :src="item.image_url"
               :alt="item.name"
-              class="w-full h-full object-cover"
+              class="w-full h-full object-contain p-2"
             />
             <div v-else class="w-full h-full flex items-center justify-center">
               <ImageIcon class="h-8 w-8 text-muted-foreground/30" />
@@ -113,22 +89,22 @@
             <DialogTitle class="text-base font-semibold leading-snug line-clamp-2">
               {{ item.name }}
             </DialogTitle>
-            <div class="flex items-baseline gap-1.5 mt-1">
-              <span class="text-lg font-bold text-primary">{{ formatPrice(currentPrice) }}</span>
+            <div class="flex items-baseline gap-1.5 mt-2">
+              <span class="text-xl font-bold text-primary">{{ formatPrice(currentPrice) }}</span>
               <span class="text-sm text-muted-foreground">/{{ sellAsPiece ? 'Adet' : 'Koli' }}</span>
             </div>
-            <p v-if="item.pieces_per_box > 1" class="text-xs text-muted-foreground mt-0.5">
+            <p v-if="item.pieces_per_box > 1" class="text-xs text-muted-foreground mt-1">
               {{ item.pieces_per_box }} Adet/Koli • {{ formatPrice(piecePrice) }}/Adet
             </p>
           </div>
         </div>
 
         <!-- Broken case section -->
-        <div v-if="item.pieces_per_box > 1" class="mx-4 mt-4">
+        <div v-if="item.pieces_per_box > 1" class="mx-5 mt-5">
           <!-- Enable broken case checkbox (when not allowed by default) -->
           <div
             v-if="!item.allow_broken_case && !brokenCaseEnabled"
-            class="p-3 rounded-lg border-2 border-muted hover:border-muted-foreground/30 cursor-pointer transition-colors"
+            class="p-4 rounded-xl border-2 border-muted hover:border-primary/30 cursor-pointer transition-colors"
             @click="brokenCaseEnabled = true"
           >
             <div class="flex items-start gap-3">
@@ -144,32 +120,32 @@
 
           <!-- Box/Piece toggle (when allowed or enabled) -->
           <div v-if="item.allow_broken_case || brokenCaseEnabled" class="space-y-2">
-            <p class="text-xs text-muted-foreground">Satış Birimi</p>
-            <div class="grid grid-cols-2 gap-2">
+            <p class="text-xs text-muted-foreground font-medium">Satış Birimi</p>
+            <div class="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                class="p-3 rounded-lg border-2 text-center transition-colors"
-                :class="!sellAsPiece ? 'border-primary bg-primary/5' : 'border-muted hover:border-muted-foreground/30'"
+                class="p-4 rounded-xl border-2 text-center transition-colors"
+                :class="!sellAsPiece ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary/30'"
                 @click="sellAsPiece = false"
               >
                 <p class="text-sm font-semibold">KOLİ</p>
-                <p class="text-lg font-bold text-primary">{{ formatPrice(item.box_price || item.price) }}</p>
+                <p class="text-lg font-bold text-primary mt-1">{{ formatPrice(item.box_price || item.price) }}</p>
               </button>
               <button
                 type="button"
-                class="p-3 rounded-lg border-2 text-center transition-colors"
-                :class="sellAsPiece ? 'border-primary bg-primary/5' : 'border-muted hover:border-muted-foreground/30'"
+                class="p-4 rounded-xl border-2 text-center transition-colors"
+                :class="sellAsPiece ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary/30'"
                 @click="sellAsPiece = true"
               >
                 <p class="text-sm font-semibold">ADET</p>
-                <p class="text-lg font-bold text-primary">{{ formatPrice(item.broken_case_piece_price || piecePrice) }}</p>
+                <p class="text-lg font-bold text-primary mt-1">{{ formatPrice(item.broken_case_piece_price || piecePrice) }}</p>
               </button>
             </div>
           </div>
         </div>
 
         <!-- Quantity section -->
-        <div class="p-4 space-y-4">
+        <div class="p-5 space-y-4">
           <p class="text-sm font-medium text-muted-foreground">Miktar</p>
 
           <!-- Main quantity controls -->
@@ -177,7 +153,7 @@
             <Button
               variant="outline"
               size="icon"
-              class="h-12 w-12"
+              class="h-12 w-12 rounded-xl"
               @click="adjustQuantity(-10)"
             >
               -10
@@ -185,7 +161,7 @@
             <Button
               variant="outline"
               size="icon"
-              class="h-12 w-12"
+              class="h-12 w-12 rounded-xl"
               :disabled="parseInt(editValue) <= 1"
               @click="adjustQuantity(-1)"
             >
@@ -196,13 +172,13 @@
               type="number"
               min="1"
               inputmode="numeric"
-              class="w-20 h-12 text-center text-xl font-bold"
+              class="w-20 h-12 text-center text-xl font-bold rounded-xl"
               @keyup.enter="confirmQuantity"
             />
             <Button
               variant="outline"
               size="icon"
-              class="h-12 w-12"
+              class="h-12 w-12 rounded-xl"
               @click="adjustQuantity(1)"
             >
               <Plus class="h-5 w-5" />
@@ -210,7 +186,7 @@
             <Button
               variant="outline"
               size="icon"
-              class="h-12 w-12"
+              class="h-12 w-12 rounded-xl"
               @click="adjustQuantity(10)"
             >
               +10
@@ -224,7 +200,7 @@
               :key="qty"
               :variant="parseInt(editValue) === qty ? 'default' : 'outline'"
               size="sm"
-              class="h-9 w-12"
+              class="h-9 w-12 rounded-lg"
               @click="editValue = String(qty)"
             >
               {{ qty }}
@@ -244,7 +220,7 @@
         </div>
 
         <!-- Footer buttons -->
-        <div class="flex items-center gap-3 p-4 border-t bg-muted/30">
+        <div class="flex items-center gap-3 p-5 border-t bg-muted/30">
           <Button
             variant="ghost"
             class="text-destructive hover:text-destructive hover:bg-destructive/10"
@@ -253,8 +229,31 @@
             <Trash2 class="h-4 w-4 mr-2" />
             Kaldır
           </Button>
-          <Button class="flex-1 h-11" @click="confirmQuantity">
-            Miktarı Güncelle
+          <Button class="flex-1 h-12 rounded-xl" @click="confirmQuantity">
+            Güncelle
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Remove Confirmation Dialog -->
+    <Dialog :open="showRemoveConfirm" @update:open="showRemoveConfirm = $event">
+      <DialogContent class="sm:max-w-[320px]">
+        <div class="text-center">
+          <div class="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
+            <Trash2 class="h-6 w-6 text-destructive" />
+          </div>
+          <DialogTitle class="text-base">Ürünü Kaldır</DialogTitle>
+          <p class="text-sm text-muted-foreground mt-2">
+            {{ item.name }} sepetten kaldırılacak. Onaylıyor musunuz?
+          </p>
+        </div>
+        <div class="flex gap-2 mt-4">
+          <Button variant="outline" class="flex-1" @click="showRemoveConfirm = false">
+            Vazgeç
+          </Button>
+          <Button variant="destructive" class="flex-1" @click="confirmRemove">
+            Kaldır
           </Button>
         </div>
       </DialogContent>
@@ -263,8 +262,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { ImageIcon, X, Minus, Plus, Trash2 } from 'lucide-vue-next'
+import { ref, computed } from 'vue'
+import { ImageIcon, Minus, Plus, Trash2 } from 'lucide-vue-next'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -284,6 +283,7 @@ const emit = defineEmits<{
 }>()
 
 const showModal = ref(false)
+const showRemoveConfirm = ref(false)
 const editValue = ref('')
 const sellAsPiece = ref(false)
 const brokenCaseEnabled = ref(false)
@@ -308,14 +308,12 @@ const lineTotal = computed(() => {
   return qty * currentPrice.value
 })
 
-// Watch for sell as piece changes to emit unit type change
-watch(sellAsPiece, (newVal) => {
-  emit('unitTypeChange', newVal ? 'piece' : 'box')
-})
 
 function openEditModal() {
   editValue.value = String(props.item.quantity)
   sellAsPiece.value = props.item.unit_type === 'piece'
+  // If item is already being sold as piece, broken case was enabled
+  brokenCaseEnabled.value = props.item.unit_type === 'piece'
   showModal.value = true
 }
 
@@ -340,6 +338,11 @@ function confirmQuantity() {
 
 function handleRemove() {
   showModal.value = false
+  showRemoveConfirm.value = true
+}
+
+function confirmRemove() {
+  showRemoveConfirm.value = false
   emit('remove')
 }
 

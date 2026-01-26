@@ -11,6 +11,7 @@ import type {
   Promotion,
   Product,
   User,
+  Category,
 } from '@/types'
 
 // Create axios instance
@@ -114,11 +115,42 @@ export const customerApi = {
   },
 }
 
+// Category API
+export const categoryApi = {
+  list: async (parentsOnly = false, parentId?: number): Promise<{ success: boolean; categories: Category[] }> => {
+    const params: Record<string, any> = {}
+    if (parentsOnly) params.parents_only = true
+    if (parentId) params.parent_id = parentId
+    const response = await api.get('/categories', { params })
+    return response.data
+  },
+
+  tree: async (): Promise<{ success: boolean; categories: Category[] }> => {
+    const response = await api.get('/categories/tree')
+    return response.data
+  },
+}
+
 // Product API
 export const productApi = {
-  search: async (query: string, customerId: number): Promise<ProductSearchResponse> => {
+  search: async (query: string, customerId: number, categoryId?: number): Promise<ProductSearchResponse> => {
+    const params: Record<string, any> = { customer_id: customerId }
+    if (query) params.q = query
+    if (categoryId) params.category_id = categoryId
+    const response = await api.get('/products/search', { params })
+    return response.data
+  },
+
+  getAll: async (customerId: number, limit = 50, offset = 0): Promise<ProductSearchResponse> => {
     const response = await api.get('/products/search', {
-      params: { q: query, customer_id: customerId },
+      params: { customer_id: customerId, limit, offset },
+    })
+    return response.data
+  },
+
+  getByCategory: async (customerId: number, categoryId: number, limit = 50, offset = 0): Promise<ProductSearchResponse> => {
+    const response = await api.get('/products/search', {
+      params: { customer_id: customerId, category_id: categoryId, limit, offset },
     })
     return response.data
   },
@@ -148,6 +180,18 @@ export const productApi = {
     const response = await api.get('/products/discounted', {
       params: { customer_id: customerId },
     })
+    return response.data
+  },
+
+  updateAvailability: async (
+    productId: number,
+    type: 'backorder' | 'preorder' | 'none'
+  ): Promise<{
+    success: boolean
+    message: string
+    product: Product
+  }> => {
+    const response = await api.patch(`/products/${productId}/availability`, { type })
     return response.data
   },
 }
