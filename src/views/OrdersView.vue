@@ -3,7 +3,18 @@
     <div class="flex-1 p-4 md:p-3 overflow-y-auto">
       <div class="max-w-3xl md:max-w-none mx-auto">
         <!-- Title -->
-        <h1 class="text-lg font-semibold mb-4">Siparişler</h1>
+        <div class="flex items-center justify-between mb-4">
+          <h1 class="text-lg font-semibold">Siparişler</h1>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            :disabled="isLoading"
+            aria-label="Yenile"
+            @click="fetchOrders(1)"
+          >
+            <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': isLoading }" />
+          </Button>
+        </div>
 
         <!-- Search -->
         <div class="relative mb-4">
@@ -488,6 +499,7 @@ import {
   ImageIcon,
   ExternalLink,
   Check,
+  RefreshCw,
 } from 'lucide-vue-next'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { Button } from '@/components/ui/button'
