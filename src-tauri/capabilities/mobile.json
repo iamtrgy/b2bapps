@@ -5,6 +5,8 @@
   "windows": ["main"],
   "platforms": ["android", "iOS"],
   "permissions": [
-    "edge-to-edge:default"
+    "edge-to-edge:allow-get-safe-area-insets",
+    "edge-to-edge:allow-enable",
+    "edge-to-edge:allow-disable"
   ]
 }
