@@ -1,38 +1,78 @@
-import { ref, onMounted } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { platform } from '@tauri-apps/plugin-os'
 
 interface SafeAreaInsets {
   top: number
   bottom: number
   left: number
   right: number
-  error?: string
 }
 
 export function useSafeArea() {
   const insets = ref<SafeAreaInsets>({ top: 0, bottom: 0, left: 0, right: 0 })
-  const isLoaded = ref(false)
+  let resizeHandler: (() => void) | null = null
 
-  const loadInsets = async () => {
-    try {
-      const result = await invoke<SafeAreaInsets>('plugin:safe-area|get_safe_area_insets')
-      insets.value = result
+  const detectInsets = () => {
+    const p = platform()
+    if (p !== 'android') return // iOS/macOS use CSS env() which works fine
 
-      document.documentElement.style.setProperty('--safe-area-top', `${result.top}px`)
-      document.documentElement.style.setProperty('--safe-area-bottom', `${result.bottom}px`)
-      document.documentElement.style.setProperty('--safe-area-left', `${result.left}px`)
-      document.documentElement.style.setProperty('--safe-area-right', `${result.right}px`)
+    const vv = window.visualViewport
+    const screenW = screen.width
+    const screenH = screen.height
+    const viewW = vv ? vv.width : window.innerWidth
+    const viewH = vv ? vv.height : window.innerHeight
+    const dpr = window.devicePixelRatio || 1
 
-      console.log('[SafeArea] Insets:', result)
-    } catch (e) {
-      // Not on Android or plugin not available — CSS env() fallback handles it
-      console.log('[SafeArea] Plugin not available, using CSS env() fallback')
-    } finally {
-      isLoaded.value = true
+    // Total system UI space = screen size - viewport size
+    const isLandscape = viewW > viewH
+    const totalVerticalUI = screenH - viewH
+    const totalHorizontalUI = screenW - viewW
+
+    let top = 0, bottom = 0, left = 0, right = 0
+
+    if (isLandscape) {
+      // Landscape: system bars on sides, minimal top/bottom
+      left = Math.round(totalHorizontalUI / 2)
+      right = Math.round(totalHorizontalUI / 2)
+      top = Math.min(totalVerticalUI, 24)
+      bottom = Math.max(0, totalVerticalUI - top)
+    } else {
+      // Portrait: status bar top (~24dp), nav bar bottom
+      top = Math.min(totalVerticalUI, 48) // status bar + possible cutout
+      bottom = Math.max(0, totalVerticalUI - top)
+      if (bottom < 8) {
+        // Gesture navigation (very thin bar) — redistribute
+        top = Math.round(totalVerticalUI * 0.6)
+        bottom = totalVerticalUI - top
+      }
     }
+
+    insets.value = { top, bottom, left, right }
+
+    document.documentElement.style.setProperty('--safe-area-top', `${top}px`)
+    document.documentElement.style.setProperty('--safe-area-bottom', `${bottom}px`)
+    document.documentElement.style.setProperty('--safe-area-left', `${left}px`)
+    document.documentElement.style.setProperty('--safe-area-right', `${right}px`)
+
+    console.log('[SafeArea] Detected:', { top, bottom, left, right, screenW, screenH, viewW, viewH, isLandscape })
   }
 
-  onMounted(loadInsets)
+  onMounted(() => {
+    detectInsets()
+    resizeHandler = () => {
+      // Debounce slightly for orientation change
+      setTimeout(detectInsets, 100)
+    }
+    window.addEventListener('resize', resizeHandler)
+    window.visualViewport?.addEventListener('resize', resizeHandler)
+  })
 
-  return { insets, isLoaded, loadInsets }
+  onUnmounted(() => {
+    if (resizeHandler) {
+      window.removeEventListener('resize', resizeHandler)
+      window.visualViewport?.removeEventListener('resize', resizeHandler)
+    }
+  })
+
+  return { insets, detectInsets }
 }

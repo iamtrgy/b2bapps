@@ -125,32 +125,6 @@ jobs:
             sed -i 's/android:configChanges="/android:windowSoftInputMode="adjustResize|stateHidden" android:configChanges="/' "$MANIFEST_FILE"
           fi
 
-      - name: Debug - Show original generated files
-        run: |
-          echo "=== Original MainActivity.kt ==="
-          find src-tauri/gen/android -name "MainActivity.kt" -exec cat {} \;
-          echo ""
-          echo "=== build.gradle.kts files ==="
-          find src-tauri/gen/android -name "build.gradle.kts" -path "*/app/*" -exec cat {} \;
-
-      - name: Add SafeArea Tauri plugin
-        run: |
-          MAIN_ACTIVITY=$(find src-tauri/gen/android -name "MainActivity.kt" | head -1)
-          if [ -f "$MAIN_ACTIVITY" ]; then
-            ACTIVITY_DIR=$(dirname "$MAIN_ACTIVITY")
-            PACKAGE=$(head -1 "$MAIN_ACTIVITY" | sed 's/package //')
-            echo "Package: $PACKAGE, Dir: $ACTIVITY_DIR"
-            # Copy templates and replace package placeholder
-            cp src-tauri/android-templates/SafeAreaPlugin.kt "$ACTIVITY_DIR/SafeAreaPlugin.kt"
-            cp src-tauri/android-templates/MainActivity.kt "$MAIN_ACTIVITY"
-            sed -i "s/__PACKAGE__/$PACKAGE/g" "$ACTIVITY_DIR/SafeAreaPlugin.kt"
-            sed -i "s/__PACKAGE__/$PACKAGE/g" "$MAIN_ACTIVITY"
-            echo "=== Final MainActivity.kt ==="
-            cat "$MAIN_ACTIVITY"
-            echo "=== Final SafeAreaPlugin.kt ==="
-            cat "$ACTIVITY_DIR/SafeAreaPlugin.kt"
-          fi
-
       - name: Setup keystore
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 --decode > $HOME/release.keystore
