@@ -7,12 +7,12 @@
           <h1 class="text-lg font-semibold">{{ UI_TEXT.title }}</h1>
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
             :disabled="isLoading"
             :aria-label="UI_TEXT.refresh"
             @click="refresh"
           >
-            <RefreshCw class="h-5 w-5" :class="{ 'animate-spin': isLoading }" />
+            <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': isLoading }" />
           </Button>
         </div>
 
