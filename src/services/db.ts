@@ -266,6 +266,18 @@ export async function getCachedProductsByCategory(customerId: number, categoryId
   return allProducts.filter(p => p.category_id === categoryId)
 }
 
+export async function getProductCountByIndex(customerId: number): Promise<number> {
+  const database = await initDB()
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction(STORES.PRODUCTS, 'readonly')
+    const store = tx.objectStore(STORES.PRODUCTS)
+    const index = store.index('customer_id')
+    const request = index.count(customerId)
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+}
+
 export async function clearProductCache(customerId?: number): Promise<void> {
   if (customerId) {
     const products = await getCachedProducts(customerId)
@@ -306,6 +318,17 @@ export async function cacheCustomers(customers: CachedCustomer[]): Promise<void>
 
 export async function getCachedCustomers(): Promise<CachedCustomer[]> {
   return getAllFromStore(STORES.CUSTOMERS)
+}
+
+export async function getCustomerCount(): Promise<number> {
+  const database = await initDB()
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction(STORES.CUSTOMERS, 'readonly')
+    const store = tx.objectStore(STORES.CUSTOMERS)
+    const request = store.count()
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
 }
 
 export async function clearCustomerCache(): Promise<void> {
@@ -449,16 +472,22 @@ export async function clearAllCache(): Promise<void> {
   // Note: We don't clear pending orders - they need to be synced
 }
 
+async function countStore(storeName: string): Promise<number> {
+  const database = await initDB()
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction(storeName, 'readonly')
+    const request = tx.objectStore(storeName).count()
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+}
+
 export async function getDatabaseSize(): Promise<{ products: number; customers: number; pendingOrders: number }> {
   const [products, customers, pendingOrders] = await Promise.all([
-    getAllFromStore(STORES.PRODUCTS),
-    getAllFromStore(STORES.CUSTOMERS),
-    getAllFromStore(STORES.PENDING_ORDERS),
+    countStore(STORES.PRODUCTS),
+    countStore(STORES.CUSTOMERS),
+    countStore(STORES.PENDING_ORDERS),
   ])
 
-  return {
-    products: (products as any[]).length,
-    customers: (customers as any[]).length,
-    pendingOrders: (pendingOrders as any[]).length,
-  }
+  return { products, customers, pendingOrders }
 }

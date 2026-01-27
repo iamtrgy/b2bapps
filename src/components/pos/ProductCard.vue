@@ -7,10 +7,11 @@
     <!-- Product Image -->
     <div class="relative aspect-[4/3] bg-white p-3">
       <img
-        v-if="product.image_url"
+        v-if="product.image_url && isOnline"
         :src="product.image_url"
         :alt="product.name"
         class="w-full h-full object-contain"
+        loading="lazy"
       />
       <div v-else class="w-full h-full flex items-center justify-center">
         <ImageIcon class="h-10 w-10 text-muted-foreground/20" />
@@ -86,12 +87,16 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { ImageIcon, Info } from 'lucide-vue-next'
 import type { Product } from '@/types'
+import { useOfflineStore } from '@/stores/offline'
 
 interface Props {
   product: Product
 }
+
+const { isOnline } = storeToRefs(useOfflineStore())
 
 const props = defineProps<Props>()
 

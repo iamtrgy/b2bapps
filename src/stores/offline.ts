@@ -8,8 +8,10 @@ import {
   deleteDatabase,
   cacheProducts,
   getCachedProducts,
+  getProductCountByIndex,
   cacheCustomers,
   getCachedCustomers,
+  getCustomerCount,
   cacheCategories,
   getCachedCategories,
   savePendingOrder,
@@ -26,8 +28,8 @@ import {
 } from '@/services/db'
 import { orderApi, productApi, customerApi } from '@/services/api'
 
-// Network check interval (10 seconds)
-const NETWORK_CHECK_INTERVAL = 10000
+// Network check interval (30 seconds)
+const NETWORK_CHECK_INTERVAL = 30000
 
 export const useOfflineStore = defineStore('offline', () => {
   // State
@@ -56,7 +58,7 @@ export const useOfflineStore = defineStore('offline', () => {
     try {
       // Try to fetch a small external resource with short timeout
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000)
+      const timeoutId = setTimeout(() => controller.abort(), 3000)
 
       // Use Google's generate_204 endpoint - returns empty 204 response
       await fetch('https://www.google.com/generate_204', {
@@ -101,10 +103,12 @@ export const useOfflineStore = defineStore('offline', () => {
         const wasOnline = isOnline.value
         isOnline.value = await checkNetworkStatus()
 
-        // If we just came online, reload the app to refresh data
+        // If we just came online, sync pending orders
         if (!wasOnline && isOnline.value) {
-          console.log('Internet connection restored. Reloading...')
-          window.location.reload()
+          console.log('Internet connection restored.')
+          if (pendingOrderCount.value > 0) {
+            syncPendingOrders()
+          }
         }
       }, NETWORK_CHECK_INTERVAL)
 
@@ -212,7 +216,7 @@ export const useOfflineStore = defineStore('offline', () => {
       // Fetch all pages
       while (hasMore) {
         const response = await productApi.getAll(apiCustomerId, PAGE_SIZE, offset)
-        allProducts = [...allProducts, ...response.products]
+        allProducts.push(...response.products)
 
         hasMore = response.hasMore ?? false
         offset += PAGE_SIZE
@@ -242,12 +246,12 @@ export const useOfflineStore = defineStore('offline', () => {
     }
   }
 
-  // Get cached product count
+  // Get cached product count (uses IDB count instead of loading all data)
   async function getCachedProductCount(cacheKey: number = 0): Promise<number> {
     try {
-      const products = await getCachedProducts(cacheKey)
-      cachedProductCount.value = products.length
-      return products.length
+      const count = await getProductCountByIndex(cacheKey)
+      cachedProductCount.value = count
+      return count
     } catch {
       return 0
     }
@@ -275,7 +279,7 @@ export const useOfflineStore = defineStore('offline', () => {
           console.error('Invalid customer API response')
           break
         }
-        allCustomers = [...allCustomers, ...response.data]
+        allCustomers.push(...response.data)
 
         hasMore = response.meta.current_page < response.meta.last_page
         page++
@@ -301,12 +305,12 @@ export const useOfflineStore = defineStore('offline', () => {
     }
   }
 
-  // Get cached customer count
+  // Get cached customer count (uses IDB count instead of loading all data)
   async function getCachedCustomerCount(): Promise<number> {
     try {
-      const customers = await getCachedCustomers()
-      cachedCustomerCount.value = customers.length
-      return customers.length
+      const count = await getCustomerCount()
+      cachedCustomerCount.value = count
+      return count
     } catch {
       return 0
     }
@@ -341,7 +345,7 @@ export const useOfflineStore = defineStore('offline', () => {
           console.error('Invalid order API response')
           break
         }
-        allOrders = [...allOrders, ...response.data]
+        allOrders.push(...response.data)
 
         if (response.meta.current_page >= response.meta.last_page) break
         page++
