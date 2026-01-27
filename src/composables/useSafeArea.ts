@@ -6,14 +6,10 @@ export function useSafeArea() {
     const p = platform()
     if (p !== 'android') return
 
-    const isLandscape = window.innerWidth > window.innerHeight
-
-    // Android system bars: status bar ~24dp top, nav bar ~48dp bottom
-    // In landscape, bars move to sides
-    const top = isLandscape ? 0 : 24
-    const bottom = isLandscape ? 0 : 48
-    const left = isLandscape ? 48 : 0
-    const right = isLandscape ? 48 : 0
+    const top = 24
+    const bottom = 48
+    const left = 0
+    const right = 0
 
     document.documentElement.style.setProperty('--safe-area-top', `${top}px`)
     document.documentElement.style.setProperty('--safe-area-bottom', `${bottom}px`)
