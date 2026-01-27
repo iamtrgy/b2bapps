@@ -172,7 +172,18 @@
       <SheetContent side="right" class="w-full sm:max-w-md flex flex-col !px-0 !pt-0">
         <!-- Header -->
         <SheetHeader class="p-4 border-b">
-          <SheetTitle class="text-base">{{ orderDetail?.order_number }}</SheetTitle>
+          <div class="flex items-center justify-between">
+            <SheetTitle class="text-base">{{ orderDetail?.order_number }}</SheetTitle>
+            <Button v-if="hasAfas && !orderDetail?.afas_synced" size="sm" class="h-8 text-xs gap-1.5" :disabled="isSyncing" @click="handleSyncToAfas">
+              <Loader2 v-if="isSyncing" class="h-3 w-3 animate-spin" />
+              <Cloud v-else class="h-3 w-3" />
+              AFAS'a Gönder
+            </Button>
+            <Badge v-else-if="hasAfas && orderDetail?.afas_synced" variant="outline" class="text-xs text-green-600 border-green-300">
+              <Check class="h-3 w-3 mr-1" />
+              AFAS
+            </Badge>
+          </div>
           <div class="flex items-center gap-2">
             <Badge variant="secondary" class="text-xs">
               {{ formatStatus(orderDetail?.status) }}
@@ -323,11 +334,6 @@
           <Button variant="outline" class="w-full h-10 text-sm gap-1.5" @click="goToOrderDetail">
             <ExternalLink class="h-4 w-4" />
             Detay Sayfası
-          </Button>
-          <Button v-if="hasAfas && !orderDetail?.afas_synced" class="w-full h-11 text-sm gap-1.5" :disabled="isSyncing" @click="handleSyncToAfas">
-            <Loader2 v-if="isSyncing" class="h-4 w-4 animate-spin" />
-            <Cloud v-else class="h-4 w-4" />
-            AFAS'a Gönder
           </Button>
         </div>
       </SheetContent>
@@ -481,6 +487,7 @@ import {
   Package,
   ImageIcon,
   ExternalLink,
+  Check,
 } from 'lucide-vue-next'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { Button } from '@/components/ui/button'
