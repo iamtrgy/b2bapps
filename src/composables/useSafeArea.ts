@@ -6,15 +6,10 @@ export function useSafeArea() {
     const p = platform()
     if (p !== 'android') return
 
-    const top = 24
-    const bottom = 48
-    const left = 0
-    const right = 0
-
-    document.documentElement.style.setProperty('--safe-area-top', `${top}px`)
-    document.documentElement.style.setProperty('--safe-area-bottom', `${bottom}px`)
-    document.documentElement.style.setProperty('--safe-area-left', `${left}px`)
-    document.documentElement.style.setProperty('--safe-area-right', `${right}px`)
+    document.documentElement.style.setProperty('--safe-area-top', '1.5rem')
+    document.documentElement.style.setProperty('--safe-area-bottom', '3rem')
+    document.documentElement.style.setProperty('--safe-area-left', '0px')
+    document.documentElement.style.setProperty('--safe-area-right', '0px')
   }
 
   let handler: (() => void) | null = null
