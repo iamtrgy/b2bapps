@@ -6,7 +6,7 @@ pub fn run() {
         .plugin(tauri_plugin_os::init());
 
     #[cfg(any(target_os = "android", target_os = "ios"))]
-    let builder = builder.plugin(tauri_plugin_safe_area_insets::init());
+    let builder = builder.plugin(tauri_plugin_edge_to_edge::init());
 
     builder
         .run(tauri::generate_context!())
