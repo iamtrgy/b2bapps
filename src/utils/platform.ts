@@ -1,20 +1,15 @@
 /**
  * Platform utilities for safe area insets and device detection
  *
- * On mobile (Android/iOS): tauri-plugin-edge-to-edge automatically injects
- * CSS variables: --safe-area-inset-top, --safe-area-inset-bottom, --safe-area-top, --safe-area-bottom
- * and dispatches 'safeAreaChanged' events.
- *
- * On desktop: falls back to env(safe-area-inset-*) CSS values.
+ * On Android: calculates safe area from screen/window dimensions
+ * On iOS/desktop: uses CSS env(safe-area-inset-*)
  */
 
 import { platform } from '@tauri-apps/plugin-os'
 
 let currentPlatform: string | null = null
+let orientationHandler: (() => void) | null = null
 
-/**
- * Detect the current platform (android, ios, macos, windows, linux)
- */
 export async function getPlatform(): Promise<string> {
   if (currentPlatform) return currentPlatform
   try {
@@ -25,47 +20,72 @@ export async function getPlatform(): Promise<string> {
   return currentPlatform
 }
 
-/**
- * Check if running on a mobile platform
- */
 export async function isMobile(): Promise<boolean> {
   const p = await getPlatform()
   return p === 'android' || p === 'ios'
 }
 
 /**
- * Apply fallback safe area insets for desktop platforms.
- * On mobile, tauri-plugin-edge-to-edge handles this automatically.
+ * Calculate and apply safe area insets for Android.
+ * Android WebView doesn't support env(safe-area-inset-*),
+ * so we estimate from screen vs viewport differences.
  */
-function applyDesktopFallbackInsets() {
+function applyAndroidInsets() {
+  const dpr = window.devicePixelRatio || 1
+  // Android status bar is typically 24dp, navigation bar 48dp
+  // Convert dp to CSS px (dp values are density-independent)
+  const statusBarHeight = Math.round(24 / dpr * dpr) // ~24px
+  const navBarHeight = Math.round(48 / dpr * dpr) // ~48px
+
+  // Better detection: compare screen height with available viewport
+  const screenH = window.screen.height
+  const innerH = window.innerHeight
+  const diff = screenH - innerH
+
+  // If there's a significant difference, system UI is present
+  const top = diff > 0 ? Math.min(Math.round(diff * 0.3), 48) : statusBarHeight
+  const bottom = diff > 0 ? Math.min(Math.round(diff * 0.7), 64) : navBarHeight
+
   const root = document.documentElement
-  root.style.setProperty('--safe-area-inset-top', 'env(safe-area-inset-top, 0px)')
-  root.style.setProperty('--safe-area-inset-bottom', 'env(safe-area-inset-bottom, 0px)')
-  root.style.setProperty('--safe-area-inset-left', 'env(safe-area-inset-left, 0px)')
-  root.style.setProperty('--safe-area-inset-right', 'env(safe-area-inset-right, 0px)')
-  // Also set the aliases used by edge-to-edge plugin
-  root.style.setProperty('--safe-area-top', 'env(safe-area-inset-top, 0px)')
-  root.style.setProperty('--safe-area-bottom', 'env(safe-area-inset-bottom, 0px)')
+  root.style.setProperty('--safe-area-top', `${top}px`)
+  root.style.setProperty('--safe-area-bottom', `${bottom}px`)
+  root.style.setProperty('--safe-area-left', '0px')
+  root.style.setProperty('--safe-area-right', '0px')
 }
 
-/**
- * Initialize platform utilities
- * On desktop: applies CSS env() fallbacks
- * On mobile: edge-to-edge plugin handles everything automatically
- */
+function applyFallbackInsets() {
+  const root = document.documentElement
+  root.style.setProperty('--safe-area-top', 'env(safe-area-inset-top, 0px)')
+  root.style.setProperty('--safe-area-bottom', 'env(safe-area-inset-bottom, 0px)')
+  root.style.setProperty('--safe-area-left', 'env(safe-area-inset-left, 0px)')
+  root.style.setProperty('--safe-area-right', 'env(safe-area-inset-right, 0px)')
+}
+
 export async function initPlatform(): Promise<void> {
   const p = await getPlatform()
 
-  if (p !== 'android' && p !== 'ios') {
-    applyDesktopFallbackInsets()
+  if (p === 'android') {
+    applyAndroidInsets()
+
+    // Re-apply on orientation change
+    orientationHandler = () => {
+      setTimeout(() => applyAndroidInsets(), 300)
+    }
+    if (screen.orientation) {
+      screen.orientation.addEventListener('change', orientationHandler)
+    }
+    window.addEventListener('resize', orientationHandler)
+  } else {
+    applyFallbackInsets()
   }
-  // On mobile, tauri-plugin-edge-to-edge auto-injects CSS vars
-  // and updates them on orientation change / keyboard show/hide
 }
 
-/**
- * Cleanup listeners
- */
 export function cleanupPlatform(): void {
-  // edge-to-edge plugin manages its own listeners
+  if (orientationHandler) {
+    if (screen.orientation) {
+      screen.orientation.removeEventListener('change', orientationHandler)
+    }
+    window.removeEventListener('resize', orientationHandler)
+    orientationHandler = null
+  }
 }
