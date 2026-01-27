@@ -283,7 +283,7 @@
         </div>
 
         <!-- Footer with Summary & Actions -->
-        <div class="border-t p-4 space-y-3 bg-muted/30 pb-[calc(3.5rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]">
+        <div class="border-t p-4 space-y-3 bg-muted/30">
           <!-- Summary -->
           <div class="space-y-2">
             <div class="flex justify-between text-sm">

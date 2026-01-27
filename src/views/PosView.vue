@@ -378,7 +378,7 @@
           </div>
 
           <!-- Cart Summary -->
-          <div class="pb-[calc(3.5rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]">
+          <div>
             <CartSummary
               v-if="!cartStore.isEmpty"
               :subtotal="cartStore.subtotal"

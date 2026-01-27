@@ -126,7 +126,7 @@
       </div>
 
       <!-- Footer -->
-      <div class="border-t p-4 pb-[calc(1rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]">
+      <div class="border-t p-4">
         <Button class="w-full h-11 text-sm" @click="$emit('select-for-pos')">
           {{ UI_TEXT.selectForPOS }}
         </Button>

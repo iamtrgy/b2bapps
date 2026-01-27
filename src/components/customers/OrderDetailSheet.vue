@@ -35,7 +35,7 @@
       </div>
 
       <!-- Footer with Summary -->
-      <div class="border-t p-4 md:p-3 bg-muted/30 pb-[calc(3.5rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]">
+      <div class="border-t p-4 md:p-3 bg-muted/30">
         <!-- Items Count -->
         <div class="flex items-center justify-between mb-3 md:mb-2 pb-3 md:pb-2 border-b">
           <span class="text-sm md:text-xs text-muted-foreground">{{ order?.items_count ?? order?.items?.length ?? 0 }} ürün</span>
