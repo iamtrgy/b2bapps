@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 pt-[calc(16px+env(safe-area-inset-top))] overflow-y-auto">
+  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 pt-[calc(16px+var(--safe-area-top,env(safe-area-inset-top,0px)))] overflow-y-auto">
     <div class="w-full max-w-md">
       <!-- Tenant Info -->
       <div class="text-center mb-8">

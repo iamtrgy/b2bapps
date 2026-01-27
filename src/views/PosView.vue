@@ -184,6 +184,17 @@
                 </Badge>
               </button>
             </div>
+
+            <!-- Customer Load More -->
+            <div v-if="customerStore.isLoading && customerStore.customers.length > 0" class="flex justify-center py-4">
+              <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+            <div v-else-if="customerStore.hasMore" class="flex justify-center py-4">
+              <Button variant="outline" size="sm" @click="customerStore.loadMore()">
+                <ChevronDown class="h-4 w-4 mr-1" />
+                Daha Fazla Yükle
+              </Button>
+            </div>
           </div>
 
           <div v-else-if="productStore.isLoading" class="h-full flex items-center justify-center">
