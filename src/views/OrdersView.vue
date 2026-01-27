@@ -169,7 +169,7 @@
 
     <!-- Order Detail Sidebar -->
     <Sheet :open="showOrderDetail" @update:open="showOrderDetail = $event">
-      <SheetContent side="right" class="w-full sm:max-w-md flex flex-col p-0">
+      <SheetContent side="right" class="w-full sm:max-w-md flex flex-col !px-0 !pt-0">
         <!-- Header -->
         <SheetHeader class="p-4 border-b">
           <SheetTitle class="text-base">{{ orderDetail?.order_number }}</SheetTitle>

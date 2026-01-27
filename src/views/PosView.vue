@@ -333,7 +333,7 @@
 
       <!-- Mobile Cart Sheet -->
       <Sheet v-model:open="showMobileCart">
-        <SheetContent side="bottom" class="h-[85vh] flex flex-col p-0">
+        <SheetContent side="bottom" class="h-[85vh] flex flex-col !px-0 !pt-0">
           <SheetHeader class="px-4 py-3 border-b">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">

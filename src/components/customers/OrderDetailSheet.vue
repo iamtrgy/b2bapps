@@ -1,6 +1,6 @@
 <template>
   <Sheet :open="open" @update:open="$emit('update:open', $event)">
-    <SheetContent side="right" class="w-full sm:max-w-md flex flex-col p-0">
+    <SheetContent side="right" class="w-full sm:max-w-md flex flex-col !px-0 !pt-0">
       <!-- Header -->
       <SheetHeader class="p-4 md:p-3 border-b">
         <SheetTitle class="text-base md:text-sm">{{ order?.order_number }}</SheetTitle>
