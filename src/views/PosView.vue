@@ -252,10 +252,10 @@
       <!-- Cart Panel - Desktop/Tablet (hidden on mobile) -->
       <div
         v-if="selectedCustomer"
-        class="hidden md:flex md:w-80 lg:w-[340px] xl:w-[380px] bg-card border-l flex-col h-full min-h-0 pb-[var(--safe-area-bottom,env(safe-area-inset-bottom,0px))]"
+        class="hidden md:flex md:w-80 lg:w-[340px] xl:w-[380px] bg-card border-l flex-col h-full min-h-0 pb-[calc(1rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]"
       >
         <!-- Cart Header -->
-        <div class="px-4 py-3 border-b flex items-center justify-between">
+        <div class="px-4 py-3 border-b flex items-center justify-between pt-[calc(0.75rem+var(--safe-area-top,env(safe-area-inset-top,0px)))]">
           <div class="flex items-center gap-2">
             <ShoppingCart class="h-4 w-4 text-muted-foreground" />
             <span class="text-sm font-semibold">Sipariş Detayları</span>
