@@ -102,7 +102,7 @@ export const authApi = {
 // Customer API
 export const customerApi = {
   list: async (page = 1, search?: string): Promise<PaginatedResponse<Customer>> => {
-    const params: Record<string, any> = { page }
+    const params: Record<string, any> = { page, per_page: 21 }
     if (search) params.search = search
     const response = await api.get('/customers', { params })
     return response.data
@@ -240,7 +240,7 @@ export const promotionApi = {
 // Order API
 export const orderApi = {
   list: async (page = 1, customerId?: number): Promise<PaginatedResponse<Order>> => {
-    const params: Record<string, any> = { page }
+    const params: Record<string, any> = { page, per_page: 21 }
     if (customerId) params.customer_id = customerId
     const response = await api.get('/orders', { params })
     return response.data

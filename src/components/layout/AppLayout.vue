@@ -4,7 +4,7 @@
     <AppSidebar />
 
     <!-- Main Content -->
-    <main class="flex-1 flex flex-col overflow-hidden pb-20 md:pb-0">
+    <main class="flex-1 flex flex-col overflow-hidden pb-20 md:pb-[var(--safe-area-bottom,env(safe-area-inset-bottom,0px))]">
       <slot />
     </main>
 
