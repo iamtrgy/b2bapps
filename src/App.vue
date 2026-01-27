@@ -3,14 +3,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
-import { initPlatform, cleanupPlatform } from '@/utils/platform'
+import { useSafeArea } from '@/composables/useSafeArea'
 
-onMounted(() => {
-  initPlatform()
-})
-
-onUnmounted(() => {
-  cleanupPlatform()
-})
+// Load native safe area insets on Android, CSS env() fallback on other platforms
+useSafeArea()
 </script>

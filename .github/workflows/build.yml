@@ -125,108 +125,112 @@ jobs:
             sed -i 's/android:configChanges="/android:windowSoftInputMode="adjustResize|stateHidden" android:configChanges="/' "$MANIFEST_FILE"
           fi
 
-      - name: Inject safe area insets into Android WebView
+      - name: Add SafeArea Tauri plugin
         run: |
-          # Find the MainActivity.kt
+          # Find the MainActivity.kt and its directory
           MAIN_ACTIVITY=$(find src-tauri/gen/android -name "MainActivity.kt" | head -1)
           if [ -f "$MAIN_ACTIVITY" ]; then
-            echo "Found MainActivity: $MAIN_ACTIVITY"
-            # Get the package name from the file
+            ACTIVITY_DIR=$(dirname "$MAIN_ACTIVITY")
             PACKAGE=$(head -1 "$MAIN_ACTIVITY" | sed 's/package //')
+            echo "Package: $PACKAGE, Dir: $ACTIVITY_DIR"
 
-            cat > "$MAIN_ACTIVITY" << 'KOTLIN_EOF'
-package PACKAGE_PLACEHOLDER
+            # Create SafeAreaPlugin.kt
+            cat > "$ACTIVITY_DIR/SafeAreaPlugin.kt" << KOTLIN_EOF
+package $PACKAGE
 
-import android.os.Bundle
-import android.view.View
-import android.view.WindowInsets
+import android.app.Activity
 import android.os.Build
-import android.webkit.WebView
+import android.view.WindowInsets
+import app.tauri.annotation.Command
+import app.tauri.annotation.TauriPlugin
+import app.tauri.plugin.JSObject
+import app.tauri.plugin.Plugin
+import app.tauri.plugin.Invoke
 
-class MainActivity : TauriActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+@TauriPlugin
+class SafeAreaPlugin(private val activity: Activity) : Plugin(activity) {
 
-        // Wait for the content view to be ready, then inject safe area insets
-        window.decorView.post {
-            injectSafeAreaInsets()
-        }
+    @Command
+    fun getSafeAreaInsets(invoke: Invoke) {
+        val result = JSObject()
 
-        // Re-inject on layout changes (rotation, keyboard, etc.)
-        window.decorView.setOnApplyWindowInsetsListener { view, insets ->
-            view.post { injectSafeAreaInsets() }
-            insets
-        }
-    }
+        activity.runOnUiThread {
+            try {
+                val rootView = activity.window.decorView
+                val density = activity.resources.displayMetrics.density
 
-    private fun injectSafeAreaInsets() {
-        try {
-            val decorView = window.decorView
-            val density = resources.displayMetrics.density
-
-            var top = 0f
-            var bottom = 0f
-            var left = 0f
-            var right = 0f
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                val insets = decorView.rootWindowInsets
-                if (insets != null) {
-                    val systemBars = insets.getInsets(
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val insets = rootView.rootWindowInsets?.getInsets(
                         WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()
                     )
-                    top = systemBars.top / density
-                    bottom = systemBars.bottom / density
-                    left = systemBars.left / density
-                    right = systemBars.right / density
+                    if (insets != null) {
+                        result.put("top", (insets.top / density).toDouble())
+                        result.put("bottom", (insets.bottom / density).toDouble())
+                        result.put("left", (insets.left / density).toDouble())
+                        result.put("right", (insets.right / density).toDouble())
+                        invoke.resolve(result)
+                        return@runOnUiThread
+                    }
                 }
-            } else {
-                @Suppress("DEPRECATION")
-                val insets = decorView.rootWindowInsets
-                if (insets != null) {
-                    top = insets.systemWindowInsetTop / density
-                    bottom = insets.systemWindowInsetBottom / density
-                    left = insets.systemWindowInsetLeft / density
-                    right = insets.systemWindowInsetRight / density
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    @Suppress("DEPRECATION")
+                    val insets = rootView.rootWindowInsets
+                    if (insets != null) {
+                        @Suppress("DEPRECATION")
+                        result.put("top", (insets.systemWindowInsetTop / density).toDouble())
+                        @Suppress("DEPRECATION")
+                        result.put("bottom", (insets.systemWindowInsetBottom / density).toDouble())
+                        @Suppress("DEPRECATION")
+                        result.put("left", (insets.systemWindowInsetLeft / density).toDouble())
+                        @Suppress("DEPRECATION")
+                        result.put("right", (insets.systemWindowInsetRight / density).toDouble())
+                        invoke.resolve(result)
+                        return@runOnUiThread
+                    }
                 }
-            }
 
-            // Inject CSS variables into the WebView
-            val js = """
-                (function() {
-                    var root = document.documentElement;
-                    root.style.setProperty('--safe-area-top', '${top}px');
-                    root.style.setProperty('--safe-area-bottom', '${bottom}px');
-                    root.style.setProperty('--safe-area-left', '${left}px');
-                    root.style.setProperty('--safe-area-right', '${right}px');
-                    console.log('[SafeArea] Injected: top=${top} bottom=${bottom} left=${left} right=${right}');
-                })();
-            """.trimIndent()
+                // Fallback - read from system resources
+                val statusBarId = activity.resources.getIdentifier("status_bar_height", "dimen", "android")
+                val statusBarPx = if (statusBarId > 0) activity.resources.getDimensionPixelSize(statusBarId) else 0
+                val navBarId = activity.resources.getIdentifier("navigation_bar_height", "dimen", "android")
+                val navBarPx = if (navBarId > 0) activity.resources.getDimensionPixelSize(navBarId) else 0
 
-            // Find the WebView and inject
-            findWebView(decorView)?.evaluateJavascript(js, null)
-        } catch (e: Exception) {
-            android.util.Log.e("SafeArea", "Failed to inject safe area insets", e)
-        }
-    }
+                result.put("top", (statusBarPx / density).toDouble())
+                result.put("bottom", (navBarPx / density).toDouble())
+                result.put("left", 0.0)
+                result.put("right", 0.0)
+                invoke.resolve(result)
 
-    private fun findWebView(view: View): WebView? {
-        if (view is WebView) return view
-        if (view is android.view.ViewGroup) {
-            for (i in 0 until view.childCount) {
-                val found = findWebView(view.getChildAt(i))
-                if (found != null) return found
+            } catch (e: Exception) {
+                result.put("top", 0.0)
+                result.put("bottom", 0.0)
+                result.put("left", 0.0)
+                result.put("right", 0.0)
+                result.put("error", e.message)
+                invoke.resolve(result)
             }
         }
-        return null
     }
 }
 KOTLIN_EOF
 
-            # Replace package placeholder with actual package
-            sed -i "s/package PACKAGE_PLACEHOLDER/package $PACKAGE/" "$MAIN_ACTIVITY"
-            echo "Injected safe area insets code into MainActivity"
-            cat "$MAIN_ACTIVITY"
+            # Update MainActivity.kt to register the plugin
+            cat > "$MAIN_ACTIVITY" << KOTLIN_EOF
+package $PACKAGE
+
+import android.os.Bundle
+import app.tauri.TauriActivity
+
+class MainActivity : TauriActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        registerPlugin(SafeAreaPlugin::class.java)
+    }
+}
+KOTLIN_EOF
+
+            echo "SafeAreaPlugin.kt created and MainActivity.kt updated"
           fi
 
       - name: Setup keystore
