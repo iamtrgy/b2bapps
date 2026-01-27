@@ -136,14 +136,16 @@
     overscroll-behavior: contain;
   }
 
-  /* Safe area utilities - uses CSS custom properties set by platform.ts on Android,
-     falls back to env() on iOS/desktop */
+  /* Safe area utilities
+     On Android: Kotlin injects --safe-area-top/bottom/left/right from real WindowInsets
+     On iOS/macOS: env(safe-area-inset-*) works natively
+     Fallback: 24px for top/bottom */
   .safe-area-top {
-    padding-top: max(var(--safe-area-top, env(safe-area-inset-top, 0px)), 0.5rem);
+    padding-top: max(var(--safe-area-top, env(safe-area-inset-top, 24px)), 0.5rem);
   }
 
   .safe-area-bottom {
-    padding-bottom: calc(var(--safe-area-bottom, env(safe-area-inset-bottom, 0px)) + 1rem);
+    padding-bottom: calc(var(--safe-area-bottom, env(safe-area-inset-bottom, 24px)) + 1rem);
   }
 
   .safe-area-left {
@@ -155,18 +157,18 @@
   }
 
   .safe-area-inset {
-    padding-top: max(var(--safe-area-top, env(safe-area-inset-top, 0px)), 0.5rem);
-    padding-bottom: max(var(--safe-area-bottom, env(safe-area-inset-bottom, 0px)), 0.5rem);
+    padding-top: max(var(--safe-area-top, env(safe-area-inset-top, 24px)), 0.5rem);
+    padding-bottom: max(var(--safe-area-bottom, env(safe-area-inset-bottom, 24px)), 0.5rem);
     padding-left: max(var(--safe-area-left, env(safe-area-inset-left, 0px)), 0.5rem);
     padding-right: max(var(--safe-area-right, env(safe-area-inset-right, 0px)), 0.5rem);
   }
 
   .safe-area-mb {
-    margin-bottom: max(var(--safe-area-bottom, env(safe-area-inset-bottom, 0px)), 1rem);
+    margin-bottom: max(var(--safe-area-bottom, env(safe-area-inset-bottom, 24px)), 1rem);
   }
 
   .safe-area-mt {
-    margin-top: max(var(--safe-area-top, env(safe-area-inset-top, 0px)), 1rem);
+    margin-top: max(var(--safe-area-top, env(safe-area-inset-top, 24px)), 1rem);
   }
 
   /* Mobile icon sizes */

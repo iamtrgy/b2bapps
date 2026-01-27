@@ -125,6 +125,110 @@ jobs:
             sed -i 's/android:configChanges="/android:windowSoftInputMode="adjustResize|stateHidden" android:configChanges="/' "$MANIFEST_FILE"
           fi
 
+      - name: Inject safe area insets into Android WebView
+        run: |
+          # Find the MainActivity.kt
+          MAIN_ACTIVITY=$(find src-tauri/gen/android -name "MainActivity.kt" | head -1)
+          if [ -f "$MAIN_ACTIVITY" ]; then
+            echo "Found MainActivity: $MAIN_ACTIVITY"
+            # Get the package name from the file
+            PACKAGE=$(head -1 "$MAIN_ACTIVITY" | sed 's/package //')
+
+            cat > "$MAIN_ACTIVITY" << 'KOTLIN_EOF'
+package PACKAGE_PLACEHOLDER
+
+import android.os.Bundle
+import android.view.View
+import android.view.WindowInsets
+import android.os.Build
+import android.webkit.WebView
+
+class MainActivity : TauriActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Wait for the content view to be ready, then inject safe area insets
+        window.decorView.post {
+            injectSafeAreaInsets()
+        }
+
+        // Re-inject on layout changes (rotation, keyboard, etc.)
+        window.decorView.setOnApplyWindowInsetsListener { view, insets ->
+            view.post { injectSafeAreaInsets() }
+            insets
+        }
+    }
+
+    private fun injectSafeAreaInsets() {
+        try {
+            val decorView = window.decorView
+            val density = resources.displayMetrics.density
+
+            var top = 0f
+            var bottom = 0f
+            var left = 0f
+            var right = 0f
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val insets = decorView.rootWindowInsets
+                if (insets != null) {
+                    val systemBars = insets.getInsets(
+                        WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()
+                    )
+                    top = systemBars.top / density
+                    bottom = systemBars.bottom / density
+                    left = systemBars.left / density
+                    right = systemBars.right / density
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                val insets = decorView.rootWindowInsets
+                if (insets != null) {
+                    top = insets.systemWindowInsetTop / density
+                    bottom = insets.systemWindowInsetBottom / density
+                    left = insets.systemWindowInsetLeft / density
+                    right = insets.systemWindowInsetRight / density
+                }
+            }
+
+            // Inject CSS variables into the WebView
+            val js = """
+                (function() {
+                    var root = document.documentElement;
+                    root.style.setProperty('--safe-area-top', '${top}px');
+                    root.style.setProperty('--safe-area-bottom', '${bottom}px');
+                    root.style.setProperty('--safe-area-left', '${left}px');
+                    root.style.setProperty('--safe-area-right', '${right}px');
+                    console.log('[SafeArea] Injected: top=${top} bottom=${bottom} left=${left} right=${right}');
+                })();
+            """.trimIndent()
+
+            // Find the WebView and inject
+            findWebView(decorView)?.evaluateJavascript(js, null)
+        } catch (e: Exception) {
+            android.util.Log.e("SafeArea", "Failed to inject safe area insets", e)
+        }
+    }
+
+    private fun findWebView(view: View): WebView? {
+        if (view is WebView) return view
+        if (view is android.view.ViewGroup) {
+            for (i in 0 until view.childCount) {
+                val found = findWebView(view.getChildAt(i))
+                if (found != null) return found
+            }
+        }
+        return null
+    }
+}
+KOTLIN_EOF
+
+            # Replace package placeholder with actual package
+            sed -i "s/package PACKAGE_PLACEHOLDER/package $PACKAGE/" "$MAIN_ACTIVITY"
+            echo "Injected safe area insets code into MainActivity"
+            cat "$MAIN_ACTIVITY"
+          fi
+
       - name: Setup keystore
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 --decode > $HOME/release.keystore
