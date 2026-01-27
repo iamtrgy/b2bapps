@@ -9,7 +9,7 @@
     </main>
 
     <!-- Mobile Bottom Navigation -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border flex items-center justify-around z-50 h-20 pb-4">
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border flex items-center justify-around z-50 h-20 pb-[var(--safe-area-bottom,env(safe-area-inset-bottom,4px))]">
       <!-- Network Status -->
       <button
         @click="showPendingOrders = true"

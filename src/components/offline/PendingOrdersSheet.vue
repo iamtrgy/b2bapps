@@ -191,7 +191,7 @@
       </div>
 
       <!-- Footer -->
-      <div class="border-t p-4 bg-muted/30 space-y-2">
+      <div class="border-t p-4 bg-muted/30 space-y-2 pb-[calc(1rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]">
         <Button
           v-if="offlineStore.isOnline && !offlineStore.isDownloading"
           class="w-full"

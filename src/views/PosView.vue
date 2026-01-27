@@ -319,7 +319,7 @@
       <button
         v-if="selectedCustomer"
         type="button"
-        class="md:hidden fixed bottom-20 right-4 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-elevation-4 flex items-center justify-center touch-manipulation z-40"
+        class="md:hidden fixed right-4 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-elevation-4 flex items-center justify-center touch-manipulation z-40 bottom-[calc(5rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]"
         @click="showMobileCart = true"
       >
         <ShoppingCart class="h-6 w-6" />
@@ -378,7 +378,7 @@
           </div>
 
           <!-- Cart Summary -->
-          <div class="pb-14">
+          <div class="pb-[calc(3.5rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]">
             <CartSummary
               v-if="!cartStore.isEmpty"
               :subtotal="cartStore.subtotal"
@@ -776,7 +776,7 @@
     >
       <div
         v-if="showAddedToast"
-        class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2"
+        class="fixed left-1/2 -translate-x-1/2 z-50 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 bottom-[calc(1rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]"
       >
         <CheckCircle class="h-4 w-4" />
         <span class="text-sm font-medium">Sepete eklendi</span>
@@ -794,7 +794,7 @@
     >
       <div
         v-if="showUndoToast"
-        class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-foreground text-background px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-3"
+        class="fixed left-1/2 -translate-x-1/2 z-50 bg-foreground text-background px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-3 bottom-[calc(1rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]"
       >
         <span class="text-sm">Ürün silindi</span>
         <button
@@ -818,7 +818,7 @@
     >
       <div
         v-if="showLowStockWarning"
-        class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-amber-500 text-white px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2"
+        class="fixed left-1/2 -translate-x-1/2 z-50 bg-amber-500 text-white px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 bottom-[calc(1rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]"
       >
         <AlertTriangle class="h-4 w-4" />
         <span class="text-sm font-medium">{{ lowStockMessage }}</span>
