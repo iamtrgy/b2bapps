@@ -21,8 +21,6 @@ export function useSafeArea() {
     const screenH = screen.height
     const viewW = vv ? vv.width : window.innerWidth
     const viewH = vv ? vv.height : window.innerHeight
-    const dpr = window.devicePixelRatio || 1
-
     // Total system UI space = screen size - viewport size
     const isLandscape = viewW > viewH
     const totalVerticalUI = screenH - viewH
@@ -31,17 +29,14 @@ export function useSafeArea() {
     let top = 0, bottom = 0, left = 0, right = 0
 
     if (isLandscape) {
-      // Landscape: system bars on sides, minimal top/bottom
       left = Math.round(totalHorizontalUI / 2)
       right = Math.round(totalHorizontalUI / 2)
       top = Math.min(totalVerticalUI, 24)
       bottom = Math.max(0, totalVerticalUI - top)
     } else {
-      // Portrait: status bar top (~24dp), nav bar bottom
-      top = Math.min(totalVerticalUI, 48) // status bar + possible cutout
+      top = Math.min(totalVerticalUI, 48)
       bottom = Math.max(0, totalVerticalUI - top)
       if (bottom < 8) {
-        // Gesture navigation (very thin bar) — redistribute
         top = Math.round(totalVerticalUI * 0.6)
         bottom = totalVerticalUI - top
       }
