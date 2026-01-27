@@ -39,6 +39,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     />
     <DialogContent
       :class="cn(sheetVariants({ side }), 'safe-area-inset', props.class)"
+      :aria-describedby="undefined"
       v-bind="{ ...forwarded, ...$attrs }"
     >
       <slot />

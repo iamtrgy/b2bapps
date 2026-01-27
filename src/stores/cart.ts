@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { CartItem, Product, Promotion } from '@/types'
+import type { CartItem, Product, Promotion, Customer } from '@/types'
 
 export const useCartStore = defineStore('cart', () => {
   // State
   const items = ref<CartItem[]>([])
   const customerId = ref<number | null>(null)
+  const customer = ref<Customer | null>(null)
   const notes = ref('')
   const appliedPromotions = ref<Promotion[]>([])
   const couponCode = ref<string | null>(null)
@@ -168,11 +169,16 @@ export const useCartStore = defineStore('cart', () => {
     lastRemovedItem.value = null
   }
 
-  function setCustomer(id: number) {
+  function setCustomer(customerData: Customer | number) {
+    const id = typeof customerData === 'number' ? customerData : customerData.id
     if (customerId.value !== id) {
       customerId.value = id
+      customer.value = typeof customerData === 'number' ? null : customerData
       // Clear cart when customer changes (prices may differ)
       clear()
+    } else if (typeof customerData !== 'number') {
+      // Update customer data even if ID is same
+      customer.value = customerData
     }
   }
 
@@ -219,6 +225,7 @@ export const useCartStore = defineStore('cart', () => {
     // State
     items,
     customerId,
+    customer,
     notes,
     appliedPromotions,
     couponCode,

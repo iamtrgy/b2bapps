@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { productApi } from '@/services/api'
+import { useOfflineStore } from '@/stores/offline'
 import type { Product } from '@/types'
 
 const PAGE_SIZE = 50
@@ -18,6 +19,7 @@ export const useProductStore = defineStore('products', () => {
   const searchQuery = ref('')
   const activeCategoryId = ref<number | null>(null)
   const activeTab = ref<'search' | 'all' | 'category' | 'best-sellers' | 'favorites' | 'discounted'>('best-sellers')
+  const isOfflineMode = ref(false)
 
   // Pagination state
   const offset = ref(0)
@@ -73,12 +75,38 @@ export const useProductStore = defineStore('products', () => {
     }
 
     isLoading.value = true
+    const offlineStore = useOfflineStore()
+
     try {
-      const response = await productApi.search(query, customerId)
-      products.value = response.products
+      if (offlineStore.isOnline) {
+        // Online: search via API
+        const response = await productApi.search(query, customerId)
+        products.value = response.products
+        isOfflineMode.value = false
+      } else {
+        // Offline: search in cached products (use global cache key 0)
+        const cachedProducts = await offlineStore.getOfflineProducts(0)
+        const queryLower = query.toLowerCase()
+        products.value = cachedProducts.filter(p =>
+          p.name.toLowerCase().includes(queryLower) ||
+          p.sku?.toLowerCase().includes(queryLower)
+        ) as unknown as Product[]
+        isOfflineMode.value = true
+      }
     } catch (error) {
       console.error('Failed to search products:', error)
-      products.value = []
+      // Try offline search on error (use global cache key 0)
+      try {
+        const cachedProducts = await offlineStore.getOfflineProducts(0)
+        const queryLower = query.toLowerCase()
+        products.value = cachedProducts.filter(p =>
+          p.name.toLowerCase().includes(queryLower) ||
+          p.sku?.toLowerCase().includes(queryLower)
+        ) as unknown as Product[]
+        isOfflineMode.value = true
+      } catch {
+        products.value = []
+      }
     } finally {
       isLoading.value = false
     }
@@ -100,12 +128,38 @@ export const useProductStore = defineStore('products', () => {
   async function loadBestSellers(customerId: number) {
     activeTab.value = 'best-sellers'
     isLoading.value = true
+
+    const offlineStore = useOfflineStore()
+
     try {
-      const response = await productApi.getBestSellers(customerId)
-      bestSellers.value = response.products
+      if (offlineStore.isOnline) {
+        // Online: fetch from API and cache
+        const response = await productApi.getBestSellers(customerId)
+        bestSellers.value = response.products
+        isOfflineMode.value = false
+
+        // Cache products for offline use
+        offlineStore.cacheProductsForCustomer(response.products, customerId)
+      } else {
+        // Offline: use cached data (show all products as fallback)
+        const cachedProducts = await offlineStore.getOfflineProducts(0)
+        bestSellers.value = cachedProducts.slice(0, 20) as unknown as Product[]
+        isOfflineMode.value = true
+      }
     } catch (error) {
       console.error('Failed to load best sellers:', error)
-      bestSellers.value = []
+      // Try to use cached data on error
+      try {
+        const cachedProducts = await offlineStore.getOfflineProducts(0)
+        if (cachedProducts.length > 0) {
+          bestSellers.value = cachedProducts.slice(0, 20) as unknown as Product[]
+          isOfflineMode.value = true
+        } else {
+          bestSellers.value = []
+        }
+      } catch {
+        bestSellers.value = []
+      }
     } finally {
       isLoading.value = false
     }
@@ -144,33 +198,102 @@ export const useProductStore = defineStore('products', () => {
     activeCategoryId.value = categoryId
     offset.value = 0
     isLoading.value = true
+
+    const offlineStore = useOfflineStore()
+
     try {
-      const response = await productApi.getByCategory(customerId, categoryId, PAGE_SIZE, 0)
-      categoryProducts.value = response.products
-      hasMore.value = response.hasMore ?? false
-      totalCount.value = response.total ?? 0
+      if (offlineStore.isOnline) {
+        // Online: fetch from API
+        const response = await productApi.getByCategory(customerId, categoryId, PAGE_SIZE, 0)
+        categoryProducts.value = response.products
+        hasMore.value = response.hasMore ?? false
+        totalCount.value = response.total ?? 0
+        isOfflineMode.value = false
+
+        // Cache products
+        offlineStore.cacheProductsForCustomer(response.products, customerId)
+      } else {
+        // Offline: filter cached products by category with client-side pagination
+        const cachedProducts = (await offlineStore.getOfflineProducts(0)).filter(p =>
+          p.category_id === categoryId
+        ) as unknown as Product[]
+        offlineCachedProducts.value = cachedProducts
+        categoryProducts.value = cachedProducts.slice(0, PAGE_SIZE)
+        hasMore.value = cachedProducts.length > PAGE_SIZE
+        totalCount.value = cachedProducts.length
+        isOfflineMode.value = true
+      }
     } catch (error) {
       console.error('Failed to load category products:', error)
-      categoryProducts.value = []
-      hasMore.value = false
+      // Try offline mode on error
+      try {
+        const cachedProducts = (await offlineStore.getOfflineProducts(0)).filter(p =>
+          p.category_id === categoryId
+        ) as unknown as Product[]
+        offlineCachedProducts.value = cachedProducts
+        categoryProducts.value = cachedProducts.slice(0, PAGE_SIZE)
+        hasMore.value = cachedProducts.length > PAGE_SIZE
+        totalCount.value = cachedProducts.length
+        isOfflineMode.value = true
+      } catch {
+        categoryProducts.value = []
+        hasMore.value = false
+      }
     } finally {
       isLoading.value = false
     }
   }
 
+  // Store for offline pagination
+  const offlineCachedProducts = ref<Product[]>([])
+
   async function loadAll(customerId: number) {
     activeTab.value = 'all'
     offset.value = 0
     isLoading.value = true
+
+    const offlineStore = useOfflineStore()
+
     try {
-      const response = await productApi.getAll(customerId, PAGE_SIZE, 0)
-      allProducts.value = response.products
-      hasMore.value = response.hasMore ?? false
-      totalCount.value = response.total ?? 0
+      if (offlineStore.isOnline) {
+        // Online: fetch from API and cache
+        const response = await productApi.getAll(customerId, PAGE_SIZE, 0)
+        allProducts.value = response.products
+        hasMore.value = response.hasMore ?? false
+        totalCount.value = response.total ?? 0
+        isOfflineMode.value = false
+        offlineCachedProducts.value = [] // Clear offline cache
+
+        // Cache products for offline use
+        offlineStore.cacheProductsForCustomer(response.products, customerId)
+      } else {
+        // Offline: use cached data with client-side pagination
+        const cachedProducts = await offlineStore.getOfflineProducts(0) as unknown as Product[]
+        offlineCachedProducts.value = cachedProducts
+        allProducts.value = cachedProducts.slice(0, PAGE_SIZE)
+        hasMore.value = cachedProducts.length > PAGE_SIZE
+        totalCount.value = cachedProducts.length
+        isOfflineMode.value = true
+      }
     } catch (error) {
       console.error('Failed to load all products:', error)
-      allProducts.value = []
-      hasMore.value = false
+      // Try to use cached data on error
+      try {
+        const cachedProducts = await offlineStore.getOfflineProducts(0) as unknown as Product[]
+        if (cachedProducts.length > 0) {
+          offlineCachedProducts.value = cachedProducts
+          allProducts.value = cachedProducts.slice(0, PAGE_SIZE)
+          hasMore.value = cachedProducts.length > PAGE_SIZE
+          totalCount.value = cachedProducts.length
+          isOfflineMode.value = true
+        } else {
+          allProducts.value = []
+          hasMore.value = false
+        }
+      } catch {
+        allProducts.value = []
+        hasMore.value = false
+      }
     } finally {
       isLoading.value = false
     }
@@ -184,6 +307,20 @@ export const useProductStore = defineStore('products', () => {
     isLoadingMore.value = true
 
     try {
+      // Offline: client-side pagination from cached data
+      if (isOfflineMode.value && offlineCachedProducts.value.length > 0) {
+        const nextBatch = offlineCachedProducts.value.slice(newOffset, newOffset + PAGE_SIZE)
+        if (activeTab.value === 'all') {
+          allProducts.value = [...allProducts.value, ...nextBatch]
+        } else if (activeTab.value === 'category') {
+          categoryProducts.value = [...categoryProducts.value, ...nextBatch]
+        }
+        offset.value = newOffset
+        hasMore.value = newOffset + PAGE_SIZE < offlineCachedProducts.value.length
+        return
+      }
+
+      // Online: fetch from API
       let response
       if (activeTab.value === 'all') {
         response = await productApi.getAll(customerId, PAGE_SIZE, newOffset)
@@ -260,6 +397,7 @@ export const useProductStore = defineStore('products', () => {
     activeTab,
     hasMore,
     totalCount,
+    isOfflineMode,
     // Getters
     displayProducts,
     hasProducts,

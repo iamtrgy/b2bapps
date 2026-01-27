@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { customerApi } from '@/services/api'
+import { useOfflineStore } from '@/stores/offline'
 import type { Customer } from '@/types'
 
 export const useCustomerStore = defineStore('customer', () => {
@@ -12,6 +13,7 @@ export const useCustomerStore = defineStore('customer', () => {
   const currentPage = ref(1)
   const lastPage = ref(1)
   const total = ref(0)
+  const isOfflineMode = ref(false)
 
   // Getters
   const hasMore = computed(() => currentPage.value < lastPage.value)
@@ -19,21 +21,67 @@ export const useCustomerStore = defineStore('customer', () => {
   // Actions
   async function fetchCustomers(page = 1, search?: string) {
     isLoading.value = true
+    const offlineStore = useOfflineStore()
+
     try {
-      const response = await customerApi.list(page, search)
+      if (offlineStore.isOnline) {
+        // Online: fetch from API
+        const response = await customerApi.list(page, search)
 
-      if (page === 1) {
-        customers.value = response.data
+        if (page === 1) {
+          customers.value = response.data
+        } else {
+          customers.value = [...customers.value, ...response.data]
+        }
+
+        currentPage.value = response.meta.current_page
+        lastPage.value = response.meta.last_page
+        total.value = response.meta.total
+        isOfflineMode.value = false
+
+        // Cache customers for offline use
+        if (page === 1 && !search) {
+          offlineStore.cacheCustomerList(response.data)
+        }
       } else {
-        customers.value = [...customers.value, ...response.data]
-      }
+        // Offline: use cached customers
+        const cachedCustomers = await offlineStore.getOfflineCustomers()
 
-      currentPage.value = response.meta.current_page
-      lastPage.value = response.meta.last_page
-      total.value = response.meta.total
+        if (search) {
+          const searchLower = search.toLowerCase()
+          customers.value = cachedCustomers.filter(c =>
+            c.company_name.toLowerCase().includes(searchLower) ||
+            c.contact_name?.toLowerCase().includes(searchLower) ||
+            c.contact_email?.toLowerCase().includes(searchLower)
+          ) as unknown as Customer[]
+        } else {
+          customers.value = cachedCustomers as unknown as Customer[]
+        }
+
+        currentPage.value = 1
+        lastPage.value = 1
+        total.value = customers.value.length
+        isOfflineMode.value = true
+      }
     } catch (error) {
       console.error('Failed to fetch customers:', error)
-      throw error
+      // Try offline mode on error
+      try {
+        const cachedCustomers = await offlineStore.getOfflineCustomers()
+        if (search) {
+          const searchLower = search.toLowerCase()
+          customers.value = cachedCustomers.filter(c =>
+            c.company_name.toLowerCase().includes(searchLower) ||
+            c.contact_name?.toLowerCase().includes(searchLower) ||
+            c.contact_email?.toLowerCase().includes(searchLower)
+          ) as unknown as Customer[]
+        } else {
+          customers.value = cachedCustomers as unknown as Customer[]
+        }
+        isOfflineMode.value = true
+      } catch {
+        customers.value = []
+      }
     } finally {
       isLoading.value = false
     }
@@ -82,6 +130,7 @@ export const useCustomerStore = defineStore('customer', () => {
     currentPage.value = 1
     lastPage.value = 1
     total.value = 0
+    isOfflineMode.value = false
   }
 
   return {
@@ -93,6 +142,7 @@ export const useCustomerStore = defineStore('customer', () => {
     currentPage,
     lastPage,
     total,
+    isOfflineMode,
     // Getters
     hasMore,
     // Actions

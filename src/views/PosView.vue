@@ -220,12 +220,19 @@
               />
             </div>
 
-            <!-- Load More Indicator -->
+            <!-- Load More Button -->
             <div v-if="productStore.isLoadingMore" class="flex justify-center py-6">
               <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-            <div v-else-if="productStore.hasMore" class="flex justify-center py-4">
-              <p class="text-xs text-muted-foreground">Daha fazla ürün için kaydırın</p>
+            <div v-else-if="productStore.hasMore && selectedCustomer" class="flex justify-center py-4">
+              <Button
+                variant="outline"
+                size="sm"
+                @click="productStore.loadMore(selectedCustomer!.id)"
+              >
+                <ChevronDown class="h-4 w-4 mr-1" />
+                Daha Fazla Yükle
+              </Button>
             </div>
           </template>
         </div>
@@ -360,22 +367,24 @@
           </div>
 
           <!-- Cart Summary -->
-          <CartSummary
-            v-if="!cartStore.isEmpty"
-            :subtotal="cartStore.subtotal"
-            :discount="cartStore.totalDiscount"
-            :vat-total="cartStore.vatTotal"
-            :vat-breakdown="cartStore.vatBreakdown"
-            :total="cartStore.total"
-            :item-count="cartStore.itemCount"
-            :box-count="cartStore.boxCount"
-            :piece-count="cartStore.pieceCount"
-            :notes="cartStore.notes"
-            :can-checkout="canCheckout"
-            :is-submitting="isSubmitting"
-            @update:notes="cartStore.setNotes"
-            @checkout="handleMobileCheckout"
-          />
+          <div class="pb-14">
+            <CartSummary
+              v-if="!cartStore.isEmpty"
+              :subtotal="cartStore.subtotal"
+              :discount="cartStore.totalDiscount"
+              :vat-total="cartStore.vatTotal"
+              :vat-breakdown="cartStore.vatBreakdown"
+              :total="cartStore.total"
+              :item-count="cartStore.itemCount"
+              :box-count="cartStore.boxCount"
+              :piece-count="cartStore.pieceCount"
+              :notes="cartStore.notes"
+              :can-checkout="canCheckout"
+              :is-submitting="isSubmitting"
+              @update:notes="cartStore.setNotes"
+              @checkout="handleMobileCheckout"
+            />
+          </div>
         </SheetContent>
       </Sheet>
     </div>
@@ -535,19 +544,28 @@
     <!-- Order Success Modal -->
     <Dialog v-model:open="showOrderSuccess">
       <DialogContent class="max-w-sm text-center">
-        <div class="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-          <CheckCircle class="h-10 w-10 text-green-600" />
+        <div
+          class="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4"
+          :class="savedOffline ? 'bg-amber-100' : 'bg-green-100'"
+        >
+          <CloudOff v-if="savedOffline" class="h-10 w-10 text-amber-600" />
+          <CheckCircle v-else class="h-10 w-10 text-green-600" />
         </div>
 
         <DialogHeader>
-          <DialogTitle>Sipariş Verildi!</DialogTitle>
+          <DialogTitle>{{ savedOffline ? 'Sipariş Kaydedildi!' : 'Sipariş Verildi!' }}</DialogTitle>
           <DialogDescription>
-            Sipariş <span class="font-semibold text-foreground">{{ lastOrderNumber }}</span> başarıyla oluşturuldu
+            <template v-if="savedOffline">
+              Sipariş çevrimdışı olarak kaydedildi. İnternet bağlantısı sağlandığında otomatik olarak gönderilecek.
+            </template>
+            <template v-else>
+              Sipariş <span class="font-semibold text-foreground">{{ lastOrderNumber }}</span> başarıyla oluşturuldu
+            </template>
           </DialogDescription>
         </DialogHeader>
 
         <DialogFooter class="flex-col gap-2 sm:flex-col">
-          <Button class="w-full" @click="viewOrder">Siparişi Görüntüle</Button>
+          <Button v-if="!savedOffline" class="w-full" @click="viewOrder">Siparişi Görüntüle</Button>
           <Button variant="outline" class="w-full" @click="handleOrderSuccessClose">Alışverişe Devam Et</Button>
         </DialogFooter>
       </DialogContent>
@@ -818,6 +836,8 @@ import {
   Clock,
   Package,
   ChevronRight,
+  ChevronDown,
+  CloudOff,
 } from 'lucide-vue-next'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import ProductCard from '@/components/pos/ProductCard.vue'
@@ -848,6 +868,7 @@ import { useCartStore } from '@/stores/cart'
 import { useProductStore } from '@/stores/products'
 import { useCustomerStore } from '@/stores/customer'
 import { useCategoryStore } from '@/stores/category'
+import { useOfflineStore } from '@/stores/offline'
 import { orderApi, customerApi, productApi } from '@/services/api'
 import type { Customer, Product } from '@/types'
 
@@ -857,6 +878,7 @@ const cartStore = useCartStore()
 const productStore = useProductStore()
 const customerStore = useCustomerStore()
 const categoryStore = useCategoryStore()
+const offlineStore = useOfflineStore()
 
 // Import tier colors from constants for consistency
 import { TIER_COLORS, TIER_BADGE_COLORS } from '@/constants/customers'
@@ -974,7 +996,7 @@ const canCheckout = computed(() => {
 
 watch(selectedCustomer, (customer) => {
   if (customer) {
-    cartStore.setCustomer(customer.id)
+    cartStore.setCustomer(customer)
     categoryStore.fetchCategories()
     productStore.loadBestSellers(customer.id)
     activeCategoryTab.value = 'best-sellers'
@@ -1257,23 +1279,87 @@ function handleKeyDown(event: KeyboardEvent) {
   }
 }
 
+const savedOffline = ref(false)
+
 async function handleCheckout() {
-  if (!canCheckout.value) return
+  if (!canCheckout.value || !selectedCustomer.value) return
 
   isSubmitting.value = true
+  savedOffline.value = false
 
   try {
-    const payload = cartStore.getOrderPayload()
-    const result = await orderApi.create(payload)
+    if (offlineStore.isOnline) {
+      // Online: send to server
+      const payload = cartStore.getOrderPayload()
+      const result = await orderApi.create(payload)
 
-    if (result.success) {
-      lastOrderId.value = result.order_id
-      lastOrderNumber.value = result.order_number
+      if (result.success) {
+        lastOrderId.value = result.order_id
+        lastOrderNumber.value = result.order_number
+        showOrderSuccess.value = true
+        cartStore.clear()
+      }
+    } else {
+      // Offline: save locally
+      const localId = await offlineStore.saveOrderOffline({
+        customerId: selectedCustomer.value.id,
+        customerName: selectedCustomer.value.company_name,
+        items: cartStore.items.map(item => ({
+          product_id: item.product_id,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          base_price: item.base_price,
+          unit_type: item.unit_type,
+          pieces_per_box: item.pieces_per_box,
+          vat_rate: item.vat_rate,
+        })),
+        subtotal: cartStore.subtotal,
+        vatTotal: cartStore.vatTotal,
+        total: cartStore.total,
+        notes: cartStore.notes,
+      })
+
+      lastOrderId.value = null
+      lastOrderNumber.value = `OFFLINE-${localId}`
+      savedOffline.value = true
       showOrderSuccess.value = true
       cartStore.clear()
     }
   } catch (error) {
     console.error('Failed to create order:', error)
+
+    // If online request fails, try saving offline
+    if (selectedCustomer.value) {
+      try {
+        const localId = await offlineStore.saveOrderOffline({
+          customerId: selectedCustomer.value.id,
+          customerName: selectedCustomer.value.company_name,
+          items: cartStore.items.map(item => ({
+            product_id: item.product_id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            base_price: item.base_price,
+            unit_type: item.unit_type,
+            pieces_per_box: item.pieces_per_box,
+            vat_rate: item.vat_rate,
+          })),
+          subtotal: cartStore.subtotal,
+          vatTotal: cartStore.vatTotal,
+          total: cartStore.total,
+          notes: cartStore.notes,
+        })
+
+        lastOrderId.value = null
+        lastOrderNumber.value = `OFFLINE-${localId}`
+        savedOffline.value = true
+        showOrderSuccess.value = true
+        cartStore.clear()
+      } catch (offlineError) {
+        console.error('Failed to save order offline:', offlineError)
+      }
+    }
   } finally {
     isSubmitting.value = false
   }
@@ -1301,7 +1387,7 @@ onMounted(async () => {
   const storedCustomer = loadCustomerFromStorage()
   if (storedCustomer) {
     selectedCustomer.value = storedCustomer
-    cartStore.setCustomer(storedCustomer.id)
+    cartStore.setCustomer(storedCustomer)
     categoryStore.fetchCategories()
     productStore.loadBestSellers(storedCustomer.id)
     activeCategoryTab.value = 'best-sellers'
@@ -1325,7 +1411,7 @@ onMounted(async () => {
           if (customer) {
             selectedCustomer.value = customer
             saveCustomerToStorage(customer)
-            cartStore.setCustomer(customer.id)
+            cartStore.setCustomer(customer)
           }
         }
 

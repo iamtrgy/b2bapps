@@ -1,5 +1,5 @@
 <template>
-  <div class="border-t bg-muted/30 safe-area-bottom">
+  <div class="border-t bg-muted/30">
     <!-- Summary Lines -->
     <div class="p-4 md:p-3 space-y-2">
       <div class="flex justify-between text-sm">
