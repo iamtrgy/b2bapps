@@ -30,9 +30,26 @@
                   {{ formatDate(order.created_at) }} tarihinde oluşturuldu
                 </p>
               </div>
-              <Badge :variant="statusVariants[order.status] || 'secondary'" class="text-xs">
-                {{ formatStatus(order.status) }}
-              </Badge>
+              <div class="flex items-center gap-2">
+                <Badge :variant="statusVariants[order.status] || 'secondary'" class="text-xs">
+                  {{ formatStatus(order.status) }}
+                </Badge>
+                <Button
+                  v-if="!order.afas_synced"
+                  size="sm"
+                  class="h-8 text-xs gap-1.5"
+                  :disabled="isSyncing"
+                  @click="handleSyncToAfas"
+                >
+                  <Loader2 v-if="isSyncing" class="h-3 w-3 animate-spin" />
+                  <Cloud v-else class="h-3 w-3" />
+                  AFAS'a Gönder
+                </Button>
+                <Badge v-else variant="outline" class="text-xs text-green-600 border-green-300 gap-1">
+                  <CheckCircle class="h-3 w-3" />
+                  AFAS
+                </Badge>
+              </div>
             </div>
 
             <div class="mt-4 grid grid-cols-2 gap-4">
@@ -149,21 +166,6 @@
             </div>
           </div>
 
-          <!-- Actions -->
-          <div class="flex justify-end gap-3">
-            <Button
-              v-if="!order.afas_synced"
-              :disabled="isSyncing"
-              @click="handleSyncToAfas"
-            >
-              <Loader2 v-if="isSyncing" class="h-4 w-4 mr-2 animate-spin" />
-              AFAS'a Gönder
-            </Button>
-            <span v-else class="text-sm text-green-600 flex items-center gap-1">
-              <CheckCircle class="h-4 w-4" />
-              AFAS'a Gönderildi
-            </span>
-          </div>
         </div>
       </div>
     </div>
@@ -204,7 +206,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { ArrowLeft, AlertCircle, ImageIcon, CheckCircle, Loader2 } from 'lucide-vue-next'
+import { ArrowLeft, AlertCircle, ImageIcon, CheckCircle, Loader2, Cloud } from 'lucide-vue-next'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
