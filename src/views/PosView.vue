@@ -252,7 +252,7 @@
       <!-- Cart Panel - Desktop/Tablet (hidden on mobile) -->
       <div
         v-if="selectedCustomer"
-        class="hidden md:flex md:w-80 lg:w-[340px] xl:w-[380px] bg-card border-l flex-col h-full min-h-0"
+        class="hidden md:flex md:w-80 lg:w-[340px] xl:w-[380px] bg-card border-l flex-col h-full min-h-0 pb-[var(--safe-area-bottom,env(safe-area-inset-bottom,0px))]"
       >
         <!-- Cart Header -->
         <div class="px-4 py-3 border-b flex items-center justify-between">

@@ -1,6 +1,6 @@
 <template>
   <!-- Desktop Sidebar - Hidden on mobile -->
-  <aside class="hidden md:flex w-14 h-screen bg-background border-r border-border flex-col">
+  <aside class="hidden md:flex w-14 h-screen bg-background border-r border-border flex-col pb-[var(--safe-area-bottom,env(safe-area-inset-bottom,0px))]">
     <!-- Network Status Indicator -->
     <div class="flex justify-center py-3 border-b border-border">
       <button
