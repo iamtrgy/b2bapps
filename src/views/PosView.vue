@@ -40,6 +40,7 @@
                 type="text"
                 placeholder="Ürün ara..."
                 class="pl-9 pr-10 h-10 text-sm bg-muted border-0"
+                @focus="(e: FocusEvent) => { const el = e.target as HTMLInputElement; el.select(); el.addEventListener('mouseup', (m) => m.preventDefault(), { once: true }) }"
                 @input="handleSearchInput"
                 @keyup.enter="handleSearch(searchQuery)"
               />
@@ -56,7 +57,10 @@
 
           <!-- Category Tabs -->
           <div class="px-3 pb-3">
-            <div class="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+            <div
+              class="flex gap-2 overflow-x-auto scrollbar-hide pb-1"
+              @wheel.prevent="(e: WheelEvent) => (e.currentTarget as HTMLElement).scrollLeft += e.deltaY"
+            >
               <!-- Quick Filters -->
               <button
                 type="button"
@@ -289,7 +293,8 @@
               v-for="(item, index) in cartStore.items"
               :key="`${item.product_id}-${item.unit_type}`"
               :item="item"
-              @update="(qty) => handleUpdateQuantity(index, qty)"
+              :customer-id="selectedCustomer?.id"
+              @update="(qty, price, boxP, pieceP) => handleUpdateQuantity(index, qty, price, boxP, pieceP)"
               @remove="handleRemoveItem(index)"
               @unit-type-change="(type) => cartStore.updateItemUnitType(index, type)"
             />
@@ -370,7 +375,8 @@
                 v-for="(item, index) in cartStore.items"
                 :key="`mobile-${item.product_id}-${item.unit_type}`"
                 :item="item"
-                @update="(qty) => handleUpdateQuantity(index, qty)"
+                :customer-id="selectedCustomer?.id"
+                @update="(qty, price, boxP, pieceP) => handleUpdateQuantity(index, qty, price, boxP, pieceP)"
                 @remove="handleRemoveItem(index)"
                 @unit-type-change="(type) => cartStore.updateItemUnitType(index, type)"
               />
@@ -753,6 +759,34 @@
           </div>
         </div>
 
+        <!-- Purchase History Section -->
+        <div class="p-4 rounded-xl border bg-muted/30">
+          <div class="flex items-center gap-2 mb-3">
+            <Clock class="h-4 w-4 text-muted-foreground" />
+            <span class="text-sm font-medium">Son Alımlar</span>
+          </div>
+          <div v-if="isLoadingProductHistory" class="flex justify-center py-2">
+            <Loader2 class="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+          <div v-else-if="productDetailHistory.length === 0" class="text-xs text-muted-foreground text-center py-2">
+            Daha önce alım yapılmamış
+          </div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="(purchase, index) in productDetailHistory.slice(0, 3)"
+              :key="index"
+              class="flex items-center justify-between text-sm"
+            >
+              <span class="text-muted-foreground">{{ purchase.date }}</span>
+              <span>{{ purchase.quantity }} {{ purchase.unit_type === 'box' ? 'koli' : 'adet' }}</span>
+              <div class="text-right">
+                <span class="font-medium text-primary">€{{ purchase.line_total_formatted }}</span>
+                <span class="text-[10px] text-muted-foreground ml-1">(€{{ purchase.per_piece_price_formatted }}/ad)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <DialogFooter class="pt-2">
           <Button
             class="w-full"
@@ -942,6 +976,23 @@ let lowStockTimeout: ReturnType<typeof setTimeout> | null = null
 const showOutOfStockModal = ref(false)
 const outOfStockProduct = ref<Product | null>(null)
 const isUpdatingAvailability = ref(false)
+
+// Product detail purchase history
+const productDetailHistory = ref<Array<{
+  order_number: string
+  status: string
+  date: string
+  date_iso: string
+  quantity: number
+  unit_type: 'box' | 'piece'
+  unit_price: number
+  unit_price_formatted: string
+  per_piece_price: number
+  per_piece_price_formatted: string
+  line_total: number
+  line_total_formatted: string
+}>>([])
+const isLoadingProductHistory = ref(false)
 
 const CUSTOMER_STORAGE_KEY = 'pos_selected_customer'
 
@@ -1182,9 +1233,23 @@ async function handleSetAvailability(type: 'backorder' | 'preorder') {
   }
 }
 
-function openProductDetail(product: Product) {
+async function openProductDetail(product: Product) {
   productDetail.value = product
   showProductDetail.value = true
+
+  // Fetch purchase history
+  if (selectedCustomer.value) {
+    isLoadingProductHistory.value = true
+    productDetailHistory.value = []
+    try {
+      const response = await productApi.getPurchaseHistory(selectedCustomer.value.id, product.id)
+      productDetailHistory.value = response.history || []
+    } catch (error) {
+      console.error('Failed to fetch purchase history:', error)
+    } finally {
+      isLoadingProductHistory.value = false
+    }
+  }
 }
 
 function addProductFromDetail() {
@@ -1206,13 +1271,13 @@ function handleRemoveItem(index: number) {
   }, 5000)
 }
 
-function handleUpdateQuantity(index: number, newQty: number) {
+function handleUpdateQuantity(index: number, newQty: number, customPrice?: number, boxPrice?: number, piecePrice?: number) {
   const item = cartStore.items[index]
   if (!item) return
 
   // Decreasing is always allowed
   if (newQty < item.quantity) {
-    cartStore.updateQuantity(index, newQty)
+    cartStore.updateQuantity(index, newQty, customPrice, boxPrice, piecePrice)
     return
   }
 
@@ -1234,7 +1299,7 @@ function handleUpdateQuantity(index: number, newQty: number) {
     }
   }
 
-  cartStore.updateQuantity(index, newQty)
+  cartStore.updateQuantity(index, newQty, customPrice, boxPrice, piecePrice)
 }
 
 function handleUndoRemove() {

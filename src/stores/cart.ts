@@ -135,11 +135,22 @@ export const useCartStore = defineStore('cart', () => {
       : (item.broken_case_piece_price || item.price)
   }
 
-  function updateQuantity(index: number, quantity: number) {
+  function updateQuantity(index: number, quantity: number, customPrice?: number, boxPrice?: number, piecePrice?: number) {
     if (quantity <= 0) {
       items.value.splice(index, 1)
     } else {
       items.value[index].quantity = quantity
+      // Update active price
+      if (customPrice !== undefined && customPrice > 0) {
+        items.value[index].price = customPrice
+      }
+      // Update both box and piece prices so they persist
+      if (boxPrice !== undefined && boxPrice > 0) {
+        items.value[index].box_price = boxPrice
+      }
+      if (piecePrice !== undefined && piecePrice > 0) {
+        items.value[index].broken_case_piece_price = piecePrice
+      }
     }
   }
 

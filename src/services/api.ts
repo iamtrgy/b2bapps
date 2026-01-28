@@ -194,6 +194,32 @@ export const productApi = {
     const response = await api.patch(`/products/${productId}/availability`, { type })
     return response.data
   },
+
+  getPurchaseHistory: async (
+    customerId: number,
+    productId: number
+  ): Promise<{
+    success: boolean
+    history: Array<{
+      order_number: string
+      status: string
+      date: string
+      date_iso: string
+      quantity: number
+      unit_type: 'box' | 'piece'
+      unit_price: number
+      unit_price_formatted: string
+      per_piece_price: number
+      per_piece_price_formatted: string
+      line_total: number
+      line_total_formatted: string
+    }>
+  }> => {
+    const response = await api.get('/products/purchase-history', {
+      params: { customer_id: customerId, product_id: productId },
+    })
+    return response.data
+  },
 }
 
 // Promotion API

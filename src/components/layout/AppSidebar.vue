@@ -5,7 +5,7 @@
     <div class="flex justify-center py-3 border-b border-border">
       <button
         @click="showPendingOrders = true"
-        class="relative flex items-center justify-center w-11 h-11 min-h-[44px] min-w-[44px] rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
+        class="relative flex items-center justify-center w-11 h-11 min-h-[44px] min-w-[44px] mx-auto rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors touch-manipulation"
         :title="offlineStore.isOnline ? 'Çevrimiçi' : 'Çevrimdışı'"
       >
         <Wifi v-if="offlineStore.isOnline" class="h-5 w-5 text-green-500" />

@@ -79,7 +79,7 @@
 
       <!-- Unit Info -->
       <p v-if="hasBox" class="text-[10px] text-muted-foreground mt-1">
-        {{ product.pieces_per_box }} adet/koli
+        {{ formatPrice(product.piece_price) }}/adet · {{ product.pieces_per_box }} adet/koli
       </p>
     </div>
   </button>

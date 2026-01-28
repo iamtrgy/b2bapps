@@ -25,6 +25,7 @@
             :placeholder="UI_TEXT.searchPlaceholder"
             class="pl-10 h-11 text-sm"
             :aria-label="UI_TEXT.searchPlaceholder"
+            @focus="(e: FocusEvent) => { const el = e.target as HTMLInputElement; el.select(); el.addEventListener('mouseup', (m) => m.preventDefault(), { once: true }) }"
             @input="handleSearch"
           />
           <Loader2

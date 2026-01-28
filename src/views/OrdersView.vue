@@ -24,6 +24,7 @@
             type="text"
             placeholder="Sipariş no veya müşteri ara..."
             class="pl-10 h-11 text-sm"
+            @focus="(e: FocusEvent) => { const el = e.target as HTMLInputElement; el.select(); el.addEventListener('mouseup', (m) => m.preventDefault(), { once: true }) }"
             @input="handleSearchInput"
           />
         </div>
