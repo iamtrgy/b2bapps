@@ -3,6 +3,7 @@
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import api from '@/services/api'
 import {
   initDB,
   deleteDatabase,
@@ -53,26 +54,33 @@ export const useOfflineStore = defineStore('offline', () => {
   // Getters
   const hasUnsyncedOrders = computed(() => pendingOrderCount.value > 0)
 
-  // Check network connectivity by pinging server
+  // Check network connectivity by pinging the tenant's API
   async function checkNetworkStatus(): Promise<boolean> {
     try {
-      // Try to fetch a small external resource with short timeout
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 3000)
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
 
-      // Use Google's generate_204 endpoint - returns empty 204 response
-      await fetch('https://www.google.com/generate_204', {
-        method: 'HEAD',
-        mode: 'no-cors',
-        signal: controller.signal,
-        cache: 'no-store',
-      })
+      // Ping the actual API server instead of Google (more reliable in WebViews)
+      const baseUrl = api.defaults.baseURL
+      if (baseUrl) {
+        await fetch(baseUrl.replace(/\/api\/pos\/?$/, '/api/health'), {
+          method: 'HEAD',
+          signal: controller.signal,
+          cache: 'no-store',
+        })
+      } else {
+        // Fallback: try Google if no API URL yet
+        await fetch('https://www.google.com/generate_204', {
+          method: 'HEAD',
+          mode: 'no-cors',
+          signal: controller.signal,
+          cache: 'no-store',
+        })
+      }
 
       clearTimeout(timeoutId)
-      // If fetch succeeds without throwing, network is available
       return true
     } catch {
-      // If fetch fails, we're offline
       return false
     }
   }

@@ -42,14 +42,14 @@
         <!-- Price & Quantity Row -->
         <div class="flex items-center gap-2 mt-1">
           <span class="text-sm font-bold text-foreground">{{ formatPrice(item.price) }}</span>
-          <span v-if="item.total_discount_percent > 0" class="text-xs text-muted-foreground line-through">
-            {{ formatPrice(item.base_price * (item.unit_type === 'box' ? item.pieces_per_box : 1)) }}
+          <span v-if="cartDiscountPercent > 0" class="text-xs text-muted-foreground line-through">
+            {{ formatPrice(item.base_price * (item.unit_type === 'box' ? (item.pieces_per_box || 1) : 1)) }}
           </span>
           <span
-            v-if="item.total_discount_percent > 0"
+            v-if="cartDiscountPercent > 0"
             class="bg-destructive text-white text-[10px] font-bold px-1.5 py-0.5 rounded"
           >
-            -{{ Math.round(item.total_discount_percent) }}%
+            -%{{ cartDiscountPercent }}
           </span>
           <span class="text-sm text-muted-foreground ml-auto">× {{ item.quantity }}</span>
         </div>
@@ -92,6 +92,12 @@
             <div class="flex items-baseline gap-1.5 mt-1">
               <span class="text-lg font-bold text-primary">{{ formatPrice(currentPrice) }}</span>
               <span class="text-xs text-muted-foreground">/{{ sellAsPiece ? 'Adet' : 'Koli' }}</span>
+              <span v-if="discountPercent > 0" class="text-xs text-muted-foreground line-through">
+                {{ formatPrice(sellAsPiece ? basePiecePrice : baseBoxPrice) }}
+              </span>
+              <span v-if="discountPercent > 0" class="bg-destructive text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                -%{{ discountPercent }}
+              </span>
             </div>
             <p v-if="item.pieces_per_box > 1" class="text-[11px] text-muted-foreground">
               {{ item.pieces_per_box }} Adet/Koli • {{ formatPrice(piecePrice) }}/Adet
@@ -148,6 +154,7 @@
                     min="0"
                     class="w-16 h-7 text-center text-sm font-bold text-primary bg-transparent border rounded focus:outline-none focus:border-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     @click.stop
+                    @mousedown.stop
                     @change="onBoxPriceChange"
                   />
                 </div>
@@ -167,16 +174,11 @@
                     min="0"
                     class="w-16 h-7 text-center text-sm font-bold text-primary bg-transparent border rounded focus:outline-none focus:border-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     @click.stop
+                    @mousedown.stop
                     @change="onPiecePriceChange"
                   />
                 </div>
               </div>
-            </div>
-            <!-- Discount badge -->
-            <div v-if="discountPercent > 0" class="mt-1.5 flex items-center justify-center">
-              <span class="bg-destructive text-white text-xs font-bold px-2 py-0.5 rounded">
-                -%{{ discountPercent }} İndirim
-              </span>
             </div>
           </div>
 
@@ -209,12 +211,6 @@
                 <span class="text-xs text-muted-foreground whitespace-nowrap">/adet</span>
               </div>
             </div>
-            <!-- Discount badge -->
-            <div v-if="discountPercent > 0" class="flex items-center">
-              <span class="bg-destructive text-white text-xs font-bold px-2 py-0.5 rounded">
-                -%{{ discountPercent }} İndirim
-              </span>
-            </div>
             <!-- Enable broken case checkbox -->
             <div
               v-if="!item.allow_broken_case && !brokenCaseEnabled"
@@ -234,16 +230,15 @@
             <div class="flex items-center gap-2">
               <span class="text-sm text-muted-foreground">€</span>
               <input
-                v-model="editBoxPrice"
+                v-model="editPiecePrice"
                 type="number"
                 step="0.01"
                 min="0"
+                :max="basePiecePrice"
                 class="w-24 h-9 text-center text-base font-bold text-primary bg-transparent border rounded-lg focus:outline-none focus:border-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                @change="onPiecePriceChange"
               />
               <span class="text-xs text-muted-foreground">/adet</span>
-              <span v-if="discountPercent > 0" class="bg-destructive text-white text-xs font-bold px-2 py-0.5 rounded ml-2">
-                -%{{ discountPercent }}
-              </span>
             </div>
           </div>
         </div>
@@ -397,22 +392,12 @@ const brokenCaseEnabled = ref(false)
 const editBoxPrice = ref('')
 const editPiecePrice = ref('')
 
-// Sync prices on blur/enter (not on every keystroke)
-function onBoxPriceChange() {
-  const boxVal = parseFloat(editBoxPrice.value)
-  const ppb = props.item.pieces_per_box || 1
-  if (!isNaN(boxVal) && boxVal >= 0 && ppb > 1) {
-    editPiecePrice.value = (boxVal / ppb).toFixed(2)
-  }
-}
-
-function onPiecePriceChange() {
-  const pieceVal = parseFloat(editPiecePrice.value)
-  const ppb = props.item.pieces_per_box || 1
-  if (!isNaN(pieceVal) && pieceVal >= 0 && ppb > 1) {
-    editBoxPrice.value = (pieceVal * ppb).toFixed(2)
-  }
-}
+// Cart list discount (actual discount based on current price vs base_price)
+const cartDiscountPercent = computed(() => {
+  const base = props.item.base_price * (props.item.unit_type === 'box' ? (props.item.pieces_per_box || 1) : 1)
+  if (base <= 0 || props.item.price >= base) return 0
+  return Math.round(((base - props.item.price) / base) * 100)
+})
 
 // Purchase history
 const purchaseHistory = ref<PurchaseHistoryItem[]>([])
@@ -444,12 +429,55 @@ const lineTotal = computed(() => {
   return qty * currentPrice.value
 })
 
-// Original prices for discount calculation
-const originalBoxPrice = computed(() => props.item.box_price || props.item.price)
+// Base prices (before any discount) for discount calculation
+const baseBoxPrice = computed(() => {
+  const ppb = props.item.pieces_per_box || 1
+  return props.item.base_price * (ppb > 1 ? ppb : 1)
+})
+const basePiecePrice = computed(() => props.item.base_price)
+
+// Max allowed prices (original base prices — user can't go higher)
+const maxBoxPrice = computed(() => baseBoxPrice.value)
+const maxPiecePrice = computed(() => basePiecePrice.value)
+
+// Clamp price between 0 and base price on blur
+function onBoxPriceChange() {
+  let boxVal = parseFloat(editBoxPrice.value)
+  if (isNaN(boxVal) || boxVal < 0) boxVal = 0
+  if (boxVal > maxBoxPrice.value) {
+    boxVal = maxBoxPrice.value
+    editBoxPrice.value = boxVal.toFixed(2)
+  }
+  const ppb = props.item.pieces_per_box || 1
+  if (ppb > 1) {
+    editPiecePrice.value = (boxVal / ppb).toFixed(2)
+  }
+}
+
+function onPiecePriceChange() {
+  let pieceVal = parseFloat(editPiecePrice.value)
+  if (isNaN(pieceVal) || pieceVal < 0) pieceVal = 0
+  if (pieceVal > maxPiecePrice.value) {
+    pieceVal = maxPiecePrice.value
+    editPiecePrice.value = pieceVal.toFixed(2)
+  }
+  const ppb = props.item.pieces_per_box || 1
+  if (ppb > 1) {
+    editBoxPrice.value = (pieceVal * ppb).toFixed(2)
+  }
+}
+
+// Discount % against base price (original pre-discount price)
 const discountPercent = computed(() => {
+  const ppb = props.item.pieces_per_box || 1
+  if (ppb <= 1) {
+    const editedPiece = parseFloat(editPiecePrice.value)
+    if (isNaN(editedPiece) || editedPiece <= 0 || editedPiece >= basePiecePrice.value) return 0
+    return Math.round(((basePiecePrice.value - editedPiece) / basePiecePrice.value) * 100)
+  }
   const editedBox = parseFloat(editBoxPrice.value)
-  if (isNaN(editedBox) || editedBox <= 0 || editedBox >= originalBoxPrice.value) return 0
-  return Math.round(((originalBoxPrice.value - editedBox) / originalBoxPrice.value) * 100)
+  if (isNaN(editedBox) || editedBox <= 0 || editedBox >= baseBoxPrice.value) return 0
+  return Math.round(((baseBoxPrice.value - editedBox) / baseBoxPrice.value) * 100)
 })
 
 
