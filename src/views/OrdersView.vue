@@ -474,7 +474,7 @@
             <thead>
               <tr style="background: #f9f9f9;">
                 <th v-if="hasAnySku" style="text-align: left; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">SKU</th>
-                <th style="width: 24px; padding: 6px 4px; border-bottom: 2px solid #333;"></th>
+                <th style="width: 32px; padding: 6px 4px; border-bottom: 2px solid #333;"></th>
                 <th style="text-align: center; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">Miktar</th>
                 <th style="text-align: center; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">Birim</th>
                 <th style="text-align: left; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">Ürün</th>
@@ -487,7 +487,7 @@
                   {{ item.product?.sku || '' }}
                 </td>
                 <td style="padding: 5px 4px; border-bottom: 1px solid #eee; text-align: center;">
-                  <span style="display: inline-block; width: 14px; height: 14px; border: 1.5px solid #333; border-radius: 2px;"></span>
+                  [&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]
                 </td>
                 <td style="padding: 5px 6px; border-bottom: 1px solid #eee; text-align: center; font-weight: 600; font-size: 13px;">
                   {{ item.quantity_ordered || item.quantity }}
@@ -508,6 +508,13 @@
                 </td>
               </tr>
             </tbody>
+            <tfoot>
+              <tr>
+                <td :colspan="hasAnySku ? 6 : 5" style="text-align: center; font-size: 10px; color: #999; padding: 8px 0; border-top: 1px solid #ddd;">
+                  {{ orderDetail.order_number }} · Paketleme Listesi · {{ orderDetail.customer?.company_name }} · Devamı sonraki sayfada
+                </td>
+              </tr>
+            </tfoot>
           </table>
 
           <!-- Packing Summary (compact) -->
@@ -724,6 +731,7 @@ const orderDetailVatBreakdown = computed(() => {
 const hasAnySku = computed(() => {
   return orderDetailItems.value.some((item: any) => item.product?.sku)
 })
+
 
 function getInitials(name: string): string {
   return name

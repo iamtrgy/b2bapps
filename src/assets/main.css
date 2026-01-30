@@ -229,6 +229,10 @@
 
 /* Print styles */
 @media print {
+  @page {
+    margin: 2mm;
+  }
+
   body > *:not(.print-content) {
     display: none !important;
   }
@@ -240,10 +244,28 @@
     top: 0;
     width: 100%;
     height: auto;
-    padding: 20px;
+    padding: 0;
     background: white;
     color: black;
   }
+
+  .print-content tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .print-content table {
+    page-break-before: avoid;
+  }
+
+  .print-content thead {
+    display: table-header-group;
+  }
+
+  .print-content tfoot {
+    display: table-footer-group;
+  }
+
 }
 
 @media screen {
