@@ -330,9 +330,13 @@
 
           <!-- Actions -->
           <div class="flex items-center gap-2">
-            <Button variant="outline" class="flex-1 h-10 text-sm gap-1.5" @click="handlePrint">
+            <Button variant="outline" class="flex-1 h-10 text-sm gap-1.5" @click="handlePrint('proforma')">
               <Printer class="h-4 w-4" />
-              Yazdır
+              Proforma
+            </Button>
+            <Button variant="outline" class="flex-1 h-10 text-sm gap-1.5" @click="handlePrint('packing')">
+              <ClipboardList class="h-4 w-4" />
+              Paketleme
             </Button>
             <Button variant="outline" class="flex-1 h-10 text-sm gap-1.5" @click="handleShare">
               <Share2 class="h-4 w-4" />
@@ -357,7 +361,10 @@
         <!-- Header -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #333;">
           <div>
-            <h1 style="font-size: 24px; margin: 0 0 5px 0; font-weight: bold;">{{ orderDetail.order_number }}</h1>
+            <h1 style="font-size: 24px; margin: 0 0 5px 0; font-weight: bold;">
+              {{ printType === 'packing' ? 'Paketleme Listesi' : orderDetail.order_number }}
+            </h1>
+            <p v-if="printType === 'packing'" style="color: #333; margin: 0; font-size: 14px;">{{ orderDetail.order_number }}</p>
             <p style="color: #666; margin: 0;">{{ formatDate(orderDetail.created_at) }}</p>
           </div>
           <div style="background: #f0f0f0; padding: 6px 12px; border-radius: 4px; font-size: 14px;">
@@ -372,77 +379,138 @@
           <span v-if="orderDetail.customer?.contact_email" style="color: #666;"> · {{ orderDetail.customer?.contact_email }}</span>
         </div>
 
-        <!-- Items -->
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-          <thead>
-            <tr style="background: #f9f9f9;">
-              <th style="text-align: left; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Ürün</th>
-              <th style="text-align: center; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Birim</th>
-              <th style="text-align: center; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Adet</th>
-              <th style="text-align: right; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Birim Fiyat</th>
-              <th style="text-align: right; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Toplam</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in orderDetailItems" :key="item.id">
-              <td style="padding: 10px 8px; border-bottom: 1px solid #eee; vertical-align: top;">
-                <div style="font-weight: 500;">{{ item.product?.name || item.name || 'Ürün' }}</div>
-                <div v-if="item.original_price && item.original_price > (item.unit_price || item.price)" style="font-size: 12px; margin-top: 2px;">
-                  <span style="text-decoration: line-through; color: #999;">{{ formatPrice(item.original_price) }}</span>
-                  <span style="background: #dc2626; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; margin-left: 5px;">
-                    -{{ Math.round(((item.original_price - (item.unit_price || item.price)) / item.original_price) * 100) }}%
-                  </span>
-                </div>
-              </td>
-              <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: center; color: #666; font-size: 13px;">
-                {{ (item.unit_type || 'box') === 'box' ? 'Koli' : 'Adet' }}
-              </td>
-              <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: center; font-weight: 500;">
-                {{ item.quantity_ordered || item.quantity }}
-              </td>
-              <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: right;">
-                {{ formatPrice(item.unit_price || item.price) }}
-              </td>
-              <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold;">
-                {{ formatPrice(item.line_total || (item.quantity_ordered || item.quantity) * (item.unit_price || item.price)) }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <!-- PROFORMA: Items with prices -->
+        <template v-if="printType === 'proforma'">
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr style="background: #f9f9f9;">
+                <th style="text-align: left; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Ürün</th>
+                <th style="text-align: center; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Birim</th>
+                <th style="text-align: center; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Adet</th>
+                <th style="text-align: right; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Birim Fiyat</th>
+                <th style="text-align: right; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Toplam</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in orderDetailItems" :key="item.id">
+                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; vertical-align: top;">
+                  <div style="font-weight: 500;">{{ item.product?.name || item.name || 'Ürün' }}</div>
+                  <div v-if="item.original_price && item.original_price > (item.unit_price || item.price)" style="font-size: 12px; margin-top: 2px;">
+                    <span style="text-decoration: line-through; color: #999;">{{ formatPrice(item.original_price) }}</span>
+                    <span style="background: #dc2626; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; margin-left: 5px;">
+                      -{{ Math.round(((item.original_price - (item.unit_price || item.price)) / item.original_price) * 100) }}%
+                    </span>
+                  </div>
+                </td>
+                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: center; color: #666; font-size: 13px;">
+                  {{ (item.unit_type || 'box') === 'box' ? 'Koli' : 'Adet' }}
+                </td>
+                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: center; font-weight: 500;">
+                  {{ item.quantity_ordered || item.quantity }}
+                </td>
+                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: right;">
+                  {{ formatPrice(item.unit_price || item.price) }}
+                </td>
+                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold;">
+                  {{ formatPrice(item.line_total || (item.quantity_ordered || item.quantity) * (item.unit_price || item.price)) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
-        <!-- Summary -->
-        <div style="max-width: 300px; margin-left: auto;">
-          <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; color: #666;">
-            <span>{{ orderDetailStats.itemCount }} ürün</span>
-            <span>
-              <template v-if="orderDetailStats.boxCount > 0">{{ orderDetailStats.boxCount }} koli</template>
-              <template v-if="orderDetailStats.boxCount > 0 && orderDetailStats.pieceCount > 0"> · </template>
-              <template v-if="orderDetailStats.pieceCount > 0">{{ orderDetailStats.pieceCount }} adet</template>
-            </span>
-          </div>
-          <div style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px;">
-            <span style="color: #666;">Ara Toplam</span>
-            <span>{{ formatPrice(orderDetail.subtotal ?? 0) }}</span>
-          </div>
-          <div v-if="(orderDetail.discount_total ?? 0) > 0" style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px;">
-            <span style="color: #666;">İndirim</span>
-            <span style="color: #16a34a;">-{{ formatPrice(orderDetail.discount_total ?? 0) }}</span>
-          </div>
-          <template v-if="orderDetailVatBreakdown.length > 0">
-            <div v-for="vat in orderDetailVatBreakdown" :key="vat.rate" style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px;">
-              <span style="color: #666;">KDV (%{{ vat.rate }})</span>
-              <span>{{ formatPrice(vat.amount) }}</span>
+          <!-- Summary -->
+          <div style="max-width: 300px; margin-left: auto;">
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; color: #666;">
+              <span>{{ orderDetailStats.itemCount }} ürün</span>
+              <span>
+                <template v-if="orderDetailStats.boxCount > 0">{{ orderDetailStats.boxCount }} koli</template>
+                <template v-if="orderDetailStats.boxCount > 0 && orderDetailStats.pieceCount > 0"> · </template>
+                <template v-if="orderDetailStats.pieceCount > 0">{{ orderDetailStats.pieceCount }} adet</template>
+              </span>
             </div>
-          </template>
-          <div v-else-if="(orderDetail.vat_total ?? 0) > 0" style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px;">
-            <span style="color: #666;">KDV</span>
-            <span>{{ formatPrice(orderDetail.vat_total ?? 0) }}</span>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px;">
+              <span style="color: #666;">Ara Toplam</span>
+              <span>{{ formatPrice(orderDetail.subtotal ?? 0) }}</span>
+            </div>
+            <div v-if="(orderDetail.discount_total ?? 0) > 0" style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px;">
+              <span style="color: #666;">İndirim</span>
+              <span style="color: #16a34a;">-{{ formatPrice(orderDetail.discount_total ?? 0) }}</span>
+            </div>
+            <template v-if="orderDetailVatBreakdown.length > 0">
+              <div v-for="vat in orderDetailVatBreakdown" :key="vat.rate" style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px;">
+                <span style="color: #666;">KDV (%{{ vat.rate }})</span>
+                <span>{{ formatPrice(vat.amount) }}</span>
+              </div>
+            </template>
+            <div v-else-if="(orderDetail.vat_total ?? 0) > 0" style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px;">
+              <span style="color: #666;">KDV</span>
+              <span>{{ formatPrice(orderDetail.vat_total ?? 0) }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 12px 0; margin-top: 8px; border-top: 2px solid #333; font-size: 18px; font-weight: bold;">
+              <span>Toplam</span>
+              <span>{{ formatPrice(orderDetail.total ?? 0) }}</span>
+            </div>
           </div>
-          <div style="display: flex; justify-content: space-between; padding: 12px 0; margin-top: 8px; border-top: 2px solid #333; font-size: 18px; font-weight: bold;">
-            <span>Toplam</span>
-            <span>{{ formatPrice(orderDetail.total ?? 0) }}</span>
+        </template>
+
+        <!-- PACKING LIST: Items without prices, with checkboxes -->
+        <template v-else>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr style="background: #f9f9f9;">
+                <th style="width: 30px; padding: 12px 8px; border-bottom: 2px solid #333;"></th>
+                <th style="text-align: left; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Ürün</th>
+                <th style="text-align: left; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">SKU</th>
+                <th style="text-align: center; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Birim</th>
+                <th style="text-align: center; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Miktar</th>
+                <th style="text-align: center; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Toplam Adet</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in orderDetailItems" :key="item.id">
+                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: center;">
+                  <span style="display: inline-block; width: 16px; height: 16px; border: 2px solid #333; border-radius: 3px;"></span>
+                </td>
+                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; font-weight: 500;">
+                  {{ item.product?.name || item.name || 'Ürün' }}
+                </td>
+                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; color: #666; font-size: 12px;">
+                  {{ item.product?.sku || '-' }}
+                </td>
+                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: center; color: #666; font-size: 13px;">
+                  {{ (item.unit_type || 'box') === 'box' ? 'Koli' : 'Adet' }}
+                </td>
+                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: center; font-weight: 600; font-size: 15px;">
+                  {{ item.quantity_ordered || item.quantity }}
+                </td>
+                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: center; color: #666;">
+                  <template v-if="(item.unit_type || 'box') === 'box' && (item.pieces_per_box || item.product?.pieces_per_box) > 1">
+                    {{ (item.quantity_ordered || item.quantity) * (item.pieces_per_box || item.product?.pieces_per_box) }} adet
+                  </template>
+                  <template v-else>
+                    {{ item.quantity_ordered || item.quantity }} adet
+                  </template>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Packing Summary (no prices) -->
+          <div style="max-width: 300px; margin-left: auto; border-top: 2px solid #333; padding-top: 12px;">
+            <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; font-weight: 500;">
+              <span>Toplam Ürün</span>
+              <span>{{ orderDetailStats.itemCount }}</span>
+            </div>
+            <div v-if="orderDetailStats.boxCount > 0" style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; color: #666;">
+              <span>Koli</span>
+              <span>{{ orderDetailStats.boxCount }}</span>
+            </div>
+            <div v-if="orderDetailStats.pieceCount > 0" style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; color: #666;">
+              <span>Tekli Adet</span>
+              <span>{{ orderDetailStats.pieceCount }}</span>
+            </div>
           </div>
-        </div>
+        </template>
 
         <!-- Notes -->
         <div v-if="orderDetail.notes" style="margin-top: 25px; padding: 15px; background: #fffbeb; border: 1px solid #fbbf24; border-radius: 8px;">
@@ -482,7 +550,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   ChevronRight,
@@ -501,6 +569,7 @@ import {
   ExternalLink,
   Check,
   RefreshCw,
+  ClipboardList,
 } from 'lucide-vue-next'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { Button } from '@/components/ui/button'
@@ -545,6 +614,7 @@ const orderDetail = ref<Order | null>(null)
 const isLoadingDetail = ref(false)
 const isSyncing = ref(false)
 const syncMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null)
+const printType = ref<'proforma' | 'packing'>('proforma')
 
 const statusLabels: Record<string, string> = {
   pending: 'Beklemede',
@@ -825,9 +895,10 @@ function formatDate(dateString: string | null | undefined): string {
   }).format(date)
 }
 
-function handlePrint() {
+function handlePrint(type: 'proforma' | 'packing') {
   if (!orderDetail.value) return
-  window.print()
+  printType.value = type
+  nextTick(() => window.print())
 }
 
 async function handleShare() {
