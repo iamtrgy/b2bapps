@@ -863,7 +863,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import {
   Search,
   Users,
@@ -918,7 +918,6 @@ import { orderApi, customerApi, productApi } from '@/services/api'
 import type { Customer, Product } from '@/types'
 
 const router = useRouter()
-const route = useRoute()
 const cartStore = useCartStore()
 const productStore = useProductStore()
 const customerStore = useCustomerStore()
@@ -1470,45 +1469,7 @@ onMounted(async () => {
   }
 
   if (customerStore.customers.length === 0) {
-    customerStore.fetchCustomers()
-  }
-
-  // Handle reorder from Orders page
-  if (route.query.reorder === 'true') {
-    const reorderData = sessionStorage.getItem('reorder_items')
-    if (reorderData) {
-      try {
-        const { customer_id, items } = JSON.parse(reorderData)
-        sessionStorage.removeItem('reorder_items')
-
-        // Find and set customer if different
-        if (customer_id && (!selectedCustomer.value || selectedCustomer.value.id !== customer_id)) {
-          const customer = customerStore.customers.find(c => c.id === customer_id)
-          if (customer) {
-            selectedCustomer.value = customer
-            saveCustomerToStorage(customer)
-            cartStore.setCustomer(customer)
-          }
-        }
-
-        // Add items to cart
-        if (items && items.length > 0 && selectedCustomer.value) {
-          for (const item of items) {
-            // Fetch product details
-            const response = await productApi.search(String(item.product_id), selectedCustomer.value.id)
-            const product = response.products?.find((p: any) => p.id === item.product_id)
-            if (product) {
-              cartStore.addItem(product, item.quantity, item.unit_type || 'box')
-            }
-          }
-        }
-
-        // Clear the query param
-        router.replace({ path: '/pos' })
-      } catch (error) {
-        console.error('Failed to process reorder:', error)
-      }
-    }
+    await customerStore.fetchCustomers()
   }
 
   window.addEventListener('keydown', handleKeyDown)

@@ -329,28 +329,24 @@
           </div>
 
           <!-- Actions -->
-          <div class="flex items-center gap-2">
-            <Button variant="outline" class="flex-1 h-10 text-sm gap-1.5" @click="handlePrint('proforma')">
+          <div class="grid grid-cols-2 gap-2">
+            <Button variant="outline" class="h-10 text-sm gap-1.5" @click="handlePrint('proforma')">
               <Printer class="h-4 w-4" />
               Proforma
             </Button>
-            <Button variant="outline" class="flex-1 h-10 text-sm gap-1.5" @click="handlePrint('packing')">
+            <Button variant="outline" class="h-10 text-sm gap-1.5" @click="handlePrint('packing')">
               <ClipboardList class="h-4 w-4" />
               Paketleme
             </Button>
-            <Button variant="outline" class="flex-1 h-10 text-sm gap-1.5" @click="handleShare">
+            <Button variant="outline" class="h-10 text-sm gap-1.5" @click="handleShare">
               <Share2 class="h-4 w-4" />
               Paylaş
             </Button>
-            <Button variant="outline" class="flex-1 h-10 text-sm gap-1.5" @click="handleReorder">
-              <RotateCcw class="h-4 w-4" />
-              Tekrarla
+            <Button variant="outline" class="h-10 text-sm gap-1.5" @click="goToOrderDetail">
+              <ExternalLink class="h-4 w-4" />
+              Detay Sayfası
             </Button>
           </div>
-          <Button variant="outline" class="w-full h-10 text-sm gap-1.5" @click="goToOrderDetail">
-            <ExternalLink class="h-4 w-4" />
-            Detay Sayfası
-          </Button>
         </div>
       </SheetContent>
     </Sheet>
@@ -358,26 +354,45 @@
     <!-- Print Content (teleported to body, hidden on screen, visible only when printing) -->
     <Teleport to="body">
       <div v-if="orderDetail" class="print-content">
-        <!-- Header -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #333;">
-          <div>
-            <h1 style="font-size: 24px; margin: 0 0 5px 0; font-weight: bold;">
-              {{ printType === 'packing' ? 'Paketleme Listesi' : orderDetail.order_number }}
-            </h1>
-            <p v-if="printType === 'packing'" style="color: #333; margin: 0; font-size: 14px;">{{ orderDetail.order_number }}</p>
-            <p style="color: #666; margin: 0;">{{ formatDate(orderDetail.created_at) }}</p>
+        <!-- Header: compact for packing, normal for proforma -->
+        <template v-if="printType === 'packing'">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #333;">
+            <div style="display: flex; align-items: baseline; gap: 12px;">
+              <h1 style="font-size: 18px; margin: 0; font-weight: bold;">Paketleme Listesi</h1>
+              <span style="font-size: 13px; color: #333;">{{ orderDetail.order_number }}</span>
+              <span style="font-size: 12px; color: #666;">{{ formatDate(orderDetail.created_at) }}</span>
+            </div>
+            <div style="background: #f0f0f0; padding: 4px 10px; border-radius: 4px; font-size: 12px;">
+              {{ formatStatus(orderDetail.status) }}
+            </div>
           </div>
-          <div style="background: #f0f0f0; padding: 6px 12px; border-radius: 4px; font-size: 14px;">
-            {{ formatStatus(orderDetail.status) }}
+          <div style="display: flex; gap: 24px; margin-bottom: 12px; font-size: 12px; border-bottom: 1px solid #ddd; padding-bottom: 8px;">
+            <div>
+              <strong style="font-size: 13px;">{{ orderDetail.customer?.company_name }}</strong><br>
+              <span style="color: #666;">{{ orderDetail.customer?.contact_name }}</span>
+              <span v-if="orderDetail.customer?.contact_phone" style="color: #666;"> · {{ orderDetail.customer?.contact_phone }}</span>
+            </div>
+            <div v-if="orderDetail.customer?.shipping_address" style="color: #666; margin-left: auto; text-align: right;">
+              {{ orderDetail.customer.shipping_address.address }}, {{ orderDetail.customer.shipping_address.postal_code }} {{ orderDetail.customer.shipping_address.city }}<template v-if="orderDetail.customer.shipping_address.country">, {{ orderDetail.customer.shipping_address.country }}</template>
+            </div>
           </div>
-        </div>
-
-        <!-- Customer Info -->
-        <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-          <strong style="font-size: 16px;">{{ orderDetail.customer?.company_name }}</strong><br>
-          <span style="color: #666;">{{ orderDetail.customer?.contact_name }}</span>
-          <span v-if="orderDetail.customer?.contact_email" style="color: #666;"> · {{ orderDetail.customer?.contact_email }}</span>
-        </div>
+        </template>
+        <template v-else>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #333;">
+            <div>
+              <h1 style="font-size: 24px; margin: 0 0 5px 0; font-weight: bold;">{{ orderDetail.order_number }}</h1>
+              <p style="color: #666; margin: 0;">{{ formatDate(orderDetail.created_at) }}</p>
+            </div>
+            <div style="background: #f0f0f0; padding: 6px 12px; border-radius: 4px; font-size: 14px;">
+              {{ formatStatus(orderDetail.status) }}
+            </div>
+          </div>
+          <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <strong style="font-size: 16px;">{{ orderDetail.customer?.company_name }}</strong><br>
+            <span style="color: #666;">{{ orderDetail.customer?.contact_name }}</span>
+            <span v-if="orderDetail.customer?.contact_email" style="color: #666;"> · {{ orderDetail.customer?.contact_email }}</span>
+          </div>
+        </template>
 
         <!-- PROFORMA: Items with prices -->
         <template v-if="printType === 'proforma'">
@@ -455,60 +470,51 @@
 
         <!-- PACKING LIST: Items without prices, with checkboxes -->
         <template v-else>
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
             <thead>
               <tr style="background: #f9f9f9;">
-                <th style="width: 30px; padding: 12px 8px; border-bottom: 2px solid #333;"></th>
-                <th style="text-align: left; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Ürün</th>
-                <th style="text-align: left; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">SKU</th>
-                <th style="text-align: center; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Birim</th>
-                <th style="text-align: center; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Miktar</th>
-                <th style="text-align: center; padding: 12px 8px; border-bottom: 2px solid #333; font-size: 13px;">Toplam Adet</th>
+                <th v-if="hasAnySku" style="text-align: left; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">SKU</th>
+                <th style="width: 24px; padding: 6px 4px; border-bottom: 2px solid #333;"></th>
+                <th style="text-align: center; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">Miktar</th>
+                <th style="text-align: center; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">Birim</th>
+                <th style="text-align: left; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">Ürün</th>
+                <th style="text-align: center; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">Toplam</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="item in orderDetailItems" :key="item.id">
-                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: center;">
-                  <span style="display: inline-block; width: 16px; height: 16px; border: 2px solid #333; border-radius: 3px;"></span>
+                <td v-if="hasAnySku" style="padding: 5px 6px; border-bottom: 1px solid #eee; color: #666; font-size: 11px; white-space: nowrap;">
+                  {{ item.product?.sku || '' }}
                 </td>
-                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; font-weight: 500;">
-                  {{ item.product?.name || item.name || 'Ürün' }}
+                <td style="padding: 5px 4px; border-bottom: 1px solid #eee; text-align: center;">
+                  <span style="display: inline-block; width: 14px; height: 14px; border: 1.5px solid #333; border-radius: 2px;"></span>
                 </td>
-                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; color: #666; font-size: 12px;">
-                  {{ item.product?.sku || '-' }}
-                </td>
-                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: center; color: #666; font-size: 13px;">
-                  {{ (item.unit_type || 'box') === 'box' ? 'Koli' : 'Adet' }}
-                </td>
-                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: center; font-weight: 600; font-size: 15px;">
+                <td style="padding: 5px 6px; border-bottom: 1px solid #eee; text-align: center; font-weight: 600; font-size: 13px;">
                   {{ item.quantity_ordered || item.quantity }}
                 </td>
-                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: center; color: #666;">
+                <td style="padding: 5px 6px; border-bottom: 1px solid #eee; text-align: center; color: #666; font-size: 11px;">
+                  {{ (item.unit_type || 'box') === 'box' ? 'Koli' : 'Adet' }}
+                </td>
+                <td style="padding: 5px 6px; border-bottom: 1px solid #eee; font-size: 12px;">
+                  {{ item.product?.name || item.name || 'Ürün' }}
+                </td>
+                <td style="padding: 5px 6px; border-bottom: 1px solid #eee; text-align: center; color: #666; font-size: 11px; white-space: nowrap;">
                   <template v-if="(item.unit_type || 'box') === 'box' && (item.pieces_per_box || item.product?.pieces_per_box) > 1">
-                    {{ (item.quantity_ordered || item.quantity) * (item.pieces_per_box || item.product?.pieces_per_box) }} adet
+                    {{ (item.quantity_ordered || item.quantity) * (item.pieces_per_box || item.product?.pieces_per_box) }} ad
                   </template>
                   <template v-else>
-                    {{ item.quantity_ordered || item.quantity }} adet
+                    {{ item.quantity_ordered || item.quantity }} ad
                   </template>
                 </td>
               </tr>
             </tbody>
           </table>
 
-          <!-- Packing Summary (no prices) -->
-          <div style="max-width: 300px; margin-left: auto; border-top: 2px solid #333; padding-top: 12px;">
-            <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; font-weight: 500;">
-              <span>Toplam Ürün</span>
-              <span>{{ orderDetailStats.itemCount }}</span>
-            </div>
-            <div v-if="orderDetailStats.boxCount > 0" style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; color: #666;">
-              <span>Koli</span>
-              <span>{{ orderDetailStats.boxCount }}</span>
-            </div>
-            <div v-if="orderDetailStats.pieceCount > 0" style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; color: #666;">
-              <span>Tekli Adet</span>
-              <span>{{ orderDetailStats.pieceCount }}</span>
-            </div>
+          <!-- Packing Summary (compact) -->
+          <div style="display: flex; justify-content: flex-end; gap: 16px; font-size: 12px; color: #666; padding-top: 6px; border-top: 1px solid #ccc;">
+            <span><strong>{{ orderDetailStats.itemCount }}</strong> ürün</span>
+            <span v-if="orderDetailStats.boxCount > 0"><strong>{{ orderDetailStats.boxCount }}</strong> koli</span>
+            <span v-if="orderDetailStats.pieceCount > 0"><strong>{{ orderDetailStats.pieceCount }}</strong> tekli</span>
           </div>
         </template>
 
@@ -563,7 +569,6 @@ import {
   X,
   Printer,
   Share2,
-  RotateCcw,
   Package,
   ImageIcon,
   ExternalLink,
@@ -581,7 +586,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { orderApi } from '@/services/api'
+import { orderApi, customerApi } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import type { Order } from '@/types'
 
@@ -715,6 +720,11 @@ const orderDetailVatBreakdown = computed(() => {
   return breakdown.sort((a, b) => a.rate - b.rate)
 })
 
+// Check if any order item has SKU (for packing list)
+const hasAnySku = computed(() => {
+  return orderDetailItems.value.some((item: any) => item.product?.sku)
+})
+
 function getInitials(name: string): string {
   return name
     .split(' ')
@@ -832,6 +842,15 @@ async function viewOrder(order: Order) {
 
   try {
     const fullData = await orderApi.get(order.id)
+    // Fetch full customer data for shipping address etc.
+    if (fullData.customer_id || fullData.customer?.id) {
+      try {
+        const fullCustomer = await customerApi.get(fullData.customer_id || fullData.customer!.id)
+        fullData.customer = fullCustomer
+      } catch {
+        // Keep order's customer data as fallback
+      }
+    }
     orderDetail.value = fullData
   } catch (error) {
     console.error('Failed to fetch order detail:', error)
@@ -898,7 +917,13 @@ function formatDate(dateString: string | null | undefined): string {
 function handlePrint(type: 'proforma' | 'packing') {
   if (!orderDetail.value) return
   printType.value = type
-  nextTick(() => window.print())
+  const originalTitle = document.title
+  const label = type === 'packing' ? 'Paketleme' : 'Proforma'
+  document.title = `${orderDetail.value.order_number}_${label}`
+  nextTick(() => {
+    window.print()
+    document.title = originalTitle
+  })
 }
 
 async function handleShare() {
@@ -919,22 +944,6 @@ async function handleShare() {
     await navigator.clipboard.writeText(shareText)
     syncMessage.value = { type: 'success', text: 'Sipariş bilgileri kopyalandı' }
   }
-}
-
-function handleReorder() {
-  if (!orderDetail.value) return
-
-  const items = orderDetailItems.value
-  sessionStorage.setItem('reorder_items', JSON.stringify({
-    customer_id: orderDetail.value.customer?.id,
-    items: items.map((item: any) => ({
-      product_id: item.product_id || item.product?.id,
-      quantity: item.quantity_ordered || item.quantity,
-      unit_type: item.unit_type || 'box',
-    }))
-  }))
-  showOrderDetail.value = false
-  router.push('/pos?reorder=true')
 }
 
 function goToOrderDetail() {
