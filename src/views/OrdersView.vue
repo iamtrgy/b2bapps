@@ -356,24 +356,26 @@
       <div v-if="orderDetail" class="print-content">
         <!-- Header: compact for packing, normal for proforma -->
         <template v-if="printType === 'packing'">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #333;">
-            <div style="display: flex; align-items: baseline; gap: 12px;">
-              <h1 style="font-size: 18px; margin: 0; font-weight: bold;">Paketleme Listesi</h1>
-              <span style="font-size: 13px; color: #333;">{{ orderDetail.order_number }}</span>
-              <span style="font-size: 12px; color: #666;">{{ formatDate(orderDetail.created_at) }}</span>
+          <div style="padding: 0 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #333;">
+              <div style="display: flex; align-items: baseline; gap: 12px;">
+                <h1 style="font-size: 18px; margin: 0; font-weight: bold;">Paketleme Listesi</h1>
+                <span style="font-size: 13px; color: #333;">{{ orderDetail.order_number }}</span>
+                <span style="font-size: 12px; color: #666;">{{ formatDate(orderDetail.created_at) }}</span>
+              </div>
+              <div style="background: #f0f0f0; padding: 4px 10px; border-radius: 4px; font-size: 12px;">
+                {{ formatStatus(orderDetail.status) }}
+              </div>
             </div>
-            <div style="background: #f0f0f0; padding: 4px 10px; border-radius: 4px; font-size: 12px;">
-              {{ formatStatus(orderDetail.status) }}
-            </div>
-          </div>
-          <div style="display: flex; gap: 24px; margin-bottom: 12px; font-size: 12px; border-bottom: 1px solid #ddd; padding-bottom: 8px;">
-            <div>
-              <strong style="font-size: 13px;">{{ orderDetail.customer?.company_name }}</strong><br>
-              <span style="color: #666;">{{ orderDetail.customer?.contact_name }}</span>
-              <span v-if="orderDetail.customer?.contact_phone" style="color: #666;"> · {{ orderDetail.customer?.contact_phone }}</span>
-            </div>
-            <div v-if="orderDetail.customer?.shipping_address" style="color: #666; margin-left: auto; text-align: right;">
-              {{ orderDetail.customer.shipping_address.address }}, {{ orderDetail.customer.shipping_address.postal_code }} {{ orderDetail.customer.shipping_address.city }}<template v-if="orderDetail.customer.shipping_address.country">, {{ orderDetail.customer.shipping_address.country }}</template>
+            <div style="display: flex; gap: 24px; margin-bottom: 12px; font-size: 12px; border-bottom: 1px solid #ddd; padding-bottom: 8px;">
+              <div>
+                <strong style="font-size: 13px;">{{ orderDetail.customer?.company_name }}</strong><br>
+                <span style="color: #666;">{{ orderDetail.customer?.contact_name }}</span>
+                <span v-if="orderDetail.customer?.contact_phone" style="color: #666;"> · {{ orderDetail.customer?.contact_phone }}</span>
+              </div>
+              <div v-if="orderDetail.customer?.shipping_address" style="color: #666; margin-left: auto; text-align: right;">
+                {{ orderDetail.customer.shipping_address.address }}, {{ orderDetail.customer.shipping_address.postal_code }} {{ orderDetail.customer.shipping_address.city }}<template v-if="orderDetail.customer.shipping_address.country">, {{ orderDetail.customer.shipping_address.country }}</template>
+              </div>
             </div>
           </div>
         </template>
@@ -468,60 +470,74 @@
           </div>
         </template>
 
-        <!-- PACKING LIST: Items without prices, with checkboxes -->
+        <!-- PACKING LIST: Paginated tables -->
         <template v-else>
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
-            <thead>
-              <tr style="background: #f9f9f9;">
-                <th v-if="hasAnySku" style="text-align: left; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">SKU</th>
-                <th style="width: 32px; padding: 6px 4px; border-bottom: 2px solid #333;"></th>
-                <th style="text-align: center; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">Miktar</th>
-                <th style="text-align: center; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">Birim</th>
-                <th style="text-align: left; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">Ürün</th>
-                <th style="text-align: center; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">Toplam</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in orderDetailItems" :key="item.id">
-                <td v-if="hasAnySku" style="padding: 5px 6px; border-bottom: 1px solid #eee; color: #666; font-size: 11px; white-space: nowrap;">
-                  {{ item.product?.sku || '' }}
-                </td>
-                <td style="padding: 5px 4px; border-bottom: 1px solid #eee; text-align: center;">
-                  [&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]
-                </td>
-                <td style="padding: 5px 6px; border-bottom: 1px solid #eee; text-align: center; font-weight: 600; font-size: 13px;">
-                  {{ item.quantity_ordered || item.quantity }}
-                </td>
-                <td style="padding: 5px 6px; border-bottom: 1px solid #eee; text-align: center; color: #666; font-size: 11px;">
-                  {{ (item.unit_type || 'box') === 'box' ? 'Koli' : 'Adet' }}
-                </td>
-                <td style="padding: 5px 6px; border-bottom: 1px solid #eee; font-size: 12px;">
-                  {{ item.product?.name || item.name || 'Ürün' }}
-                </td>
-                <td style="padding: 5px 6px; border-bottom: 1px solid #eee; text-align: center; color: #666; font-size: 11px; white-space: nowrap;">
-                  <template v-if="(item.unit_type || 'box') === 'box' && (item.pieces_per_box || item.product?.pieces_per_box) > 1">
-                    {{ (item.quantity_ordered || item.quantity) * (item.pieces_per_box || item.product?.pieces_per_box) }} ad
-                  </template>
-                  <template v-else>
-                    {{ item.quantity_ordered || item.quantity }} ad
-                  </template>
-                </td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr>
-                <td :colspan="hasAnySku ? 6 : 5" style="text-align: center; font-size: 10px; color: #999; padding: 8px 0; border-top: 1px solid #ddd;">
-                  {{ orderDetail.order_number }} · Paketleme Listesi · {{ orderDetail.customer?.company_name }} · Devamı sonraki sayfada
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+          <div style="padding: 0 12px;">
+            <div
+              v-for="(pageItems, pageIndex) in packingPages"
+              :key="pageIndex"
+              :style="{ paddingTop: pageIndex > 0 ? '60px' : '0', pageBreakBefore: pageIndex > 0 ? 'always' : 'auto' }"
+            >
+              <!-- Page header for page 2+ -->
+              <div v-if="pageIndex > 0" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #ccc;">
+                <span style="font-size: 13px; font-weight: bold;">{{ orderDetail.order_number }} · Paketleme Listesi</span>
+                <span style="font-size: 11px; color: #666;">Sayfa {{ pageIndex + 1 }} / {{ packingPages.length }}</span>
+              </div>
 
-          <!-- Packing Summary (compact) -->
-          <div style="display: flex; justify-content: flex-end; gap: 16px; font-size: 12px; color: #666; padding-top: 6px; border-top: 1px solid #ccc;">
-            <span><strong>{{ orderDetailStats.itemCount }}</strong> ürün</span>
-            <span v-if="orderDetailStats.boxCount > 0"><strong>{{ orderDetailStats.boxCount }}</strong> koli</span>
-            <span v-if="orderDetailStats.pieceCount > 0"><strong>{{ orderDetailStats.pieceCount }}</strong> tekli</span>
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: #f9f9f9;">
+                    <th v-if="hasAnySku" style="text-align: left; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">SKU</th>
+                    <th style="width: 32px; padding: 6px 4px; border-bottom: 2px solid #333;"></th>
+                    <th style="text-align: center; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">Miktar</th>
+                    <th style="text-align: center; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">Birim</th>
+                    <th style="text-align: left; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">Ürün</th>
+                    <th style="text-align: center; padding: 6px 6px; border-bottom: 2px solid #333; font-size: 11px;">Toplam</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in pageItems" :key="item.id">
+                    <td v-if="hasAnySku" style="padding: 5px 6px; border-bottom: 1px solid #eee; color: #666; font-size: 11px; white-space: nowrap;">
+                      {{ item.product?.sku || '' }}
+                    </td>
+                    <td style="padding: 5px 4px; border-bottom: 1px solid #eee; text-align: center;">
+                      [&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]
+                    </td>
+                    <td style="padding: 5px 6px; border-bottom: 1px solid #eee; text-align: center; font-weight: 600; font-size: 13px;">
+                      {{ item.quantity_ordered || item.quantity }}
+                    </td>
+                    <td style="padding: 5px 6px; border-bottom: 1px solid #eee; text-align: center; color: #666; font-size: 11px;">
+                      {{ (item.unit_type || 'box') === 'box' ? 'Koli' : 'Adet' }}
+                    </td>
+                    <td style="padding: 5px 6px; border-bottom: 1px solid #eee; font-size: 12px;">
+                      {{ item.product?.name || item.name || 'Ürün' }}
+                    </td>
+                    <td style="padding: 5px 6px; border-bottom: 1px solid #eee; text-align: center; color: #666; font-size: 11px; white-space: nowrap;">
+                      <template v-if="(item.unit_type || 'box') === 'box' && (item.pieces_per_box || item.product?.pieces_per_box) > 1">
+                        {{ (item.quantity_ordered || item.quantity) * (item.pieces_per_box || item.product?.pieces_per_box) }} ad
+                      </template>
+                      <template v-else>
+                        {{ item.quantity_ordered || item.quantity }} ad
+                      </template>
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td :colspan="hasAnySku ? 6 : 5" style="text-align: center; font-size: 10px; color: #000; padding: 8px 0; border-top: 1px solid #ddd;">
+                      {{ orderDetail.order_number }} · Paketleme Listesi · {{ orderDetail.customer?.company_name }} · Sayfa {{ pageIndex + 1 }} / {{ packingPages.length }}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <!-- Packing Summary (compact, after last page) -->
+            <div style="display: flex; justify-content: flex-end; gap: 16px; font-size: 12px; color: #666; padding-top: 6px; border-top: 1px solid #ccc;">
+              <span><strong>{{ orderDetailStats.itemCount }}</strong> ürün</span>
+              <span v-if="orderDetailStats.boxCount > 0"><strong>{{ orderDetailStats.boxCount }}</strong> koli</span>
+              <span v-if="orderDetailStats.pieceCount > 0"><strong>{{ orderDetailStats.pieceCount }}</strong> tekli</span>
+            </div>
           </div>
         </template>
 
@@ -730,6 +746,22 @@ const orderDetailVatBreakdown = computed(() => {
 // Check if any order item has SKU (for packing list)
 const hasAnySku = computed(() => {
   return orderDetailItems.value.some((item: any) => item.product?.sku)
+})
+
+const packingPages = computed(() => {
+  const items = orderDetailItems.value
+  const firstPageSize = 25
+  const otherPageSize = 30
+  const pages: any[][] = []
+  if (items.length <= firstPageSize) {
+    pages.push(items)
+  } else {
+    pages.push(items.slice(0, firstPageSize))
+    for (let i = firstPageSize; i < items.length; i += otherPageSize) {
+      pages.push(items.slice(i, i + otherPageSize))
+    }
+  }
+  return pages
 })
 
 

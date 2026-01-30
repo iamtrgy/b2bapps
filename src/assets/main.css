@@ -229,10 +229,6 @@
 
 /* Print styles */
 @media print {
-  @page {
-    margin: 2mm;
-  }
-
   body > *:not(.print-content) {
     display: none !important;
   }
