@@ -363,8 +363,8 @@
                 <span style="font-size: 13px; color: #333;">{{ orderDetail.order_number }}</span>
                 <span style="font-size: 12px; color: #666;">{{ formatDate(orderDetail.created_at) }}</span>
               </div>
-              <div style="background: #f0f0f0; padding: 4px 10px; border-radius: 4px; font-size: 12px;">
-                {{ formatStatus(orderDetail.status) }}
+              <div style="font-size: 15px; font-weight: bold; color: #333;">
+                {{ packingPages.length }} SAYFA
               </div>
             </div>
             <div style="display: flex; gap: 24px; margin-bottom: 12px; font-size: 12px; border-bottom: 1px solid #ddd; padding-bottom: 8px;">
@@ -506,7 +506,7 @@
                     <td style="padding: 5px 6px; border-bottom: 1px solid #eee; text-align: center; font-weight: 600; font-size: 13px;">
                       {{ item.quantity_ordered || item.quantity }}
                     </td>
-                    <td style="padding: 5px 6px; border-bottom: 1px solid #eee; text-align: center; color: #666; font-size: 11px;">
+                    <td :style="`padding: 5px 6px; border-bottom: 1px solid #eee; text-align: center; color: #666; font-size: 11px;${(item.unit_type || 'box') === 'piece' ? ' background: #e8e8e8;' : ''}`">
                       {{ (item.unit_type || 'box') === 'box' ? 'Koli' : 'Adet' }}
                     </td>
                     <td style="padding: 5px 6px; border-bottom: 1px solid #eee; font-size: 12px;">
