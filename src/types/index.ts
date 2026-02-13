@@ -154,6 +154,7 @@ export interface CartItem {
   availability_status?: 'in_stock' | 'low_stock' | 'out_of_stock' | 'backorder' | 'preorder'
   allow_backorder?: boolean
   is_preorder?: boolean
+  stock_quantity?: number
 }
 
 // Order types
@@ -231,6 +232,7 @@ export interface ReturnableOrderItem {
   product_sku: string
   image_url: string | null
   quantity_ordered: number
+  quantity_returnable: number
   unit_price: number
   original_price: number
   unit_type: 'piece' | 'box'

@@ -760,7 +760,14 @@
                     variant="secondary"
                     class="text-[10px] bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400"
                   >
-                    Zaten İade Edildi
+                    Tamamı İade Edildi
+                  </Badge>
+                  <Badge
+                    v-else-if="order.items.some(i => (i.quantity_returnable ?? i.quantity_ordered) < i.quantity_ordered)"
+                    variant="secondary"
+                    class="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
+                  >
+                    Kısmi İade
                   </Badge>
                 </div>
                 <p class="text-xs text-muted-foreground mt-0.5">
@@ -1251,12 +1258,12 @@ const canCheckout = computed(() => {
 const stockWarnings = computed(() => {
   const warnings: { productId: number; name: string; stock: number }[] = []
   for (const item of cartStore.items) {
-    const product = productStore.displayProducts.find(p => p.id === item.product_id)
-    if (product && product.stock_quantity > 0) {
+    const stock = item.stock_quantity ?? 0
+    if (stock > 0) {
       const piecesPerBox = item.pieces_per_box || 1
       const totalPieces = item.unit_type === 'box' ? item.quantity * piecesPerBox : item.quantity
-      if (totalPieces > product.stock_quantity) {
-        warnings.push({ productId: item.product_id, name: item.name, stock: product.stock_quantity })
+      if (totalPieces > stock) {
+        warnings.push({ productId: item.product_id, name: item.name, stock })
       }
     }
   }

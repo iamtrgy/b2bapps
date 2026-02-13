@@ -56,33 +56,7 @@ export const useOfflineStore = defineStore('offline', () => {
 
   // Check network connectivity by pinging the tenant's API
   async function checkNetworkStatus(): Promise<boolean> {
-    try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000)
-
-      // Ping the actual API server instead of Google (more reliable in WebViews)
-      const baseUrl = api.defaults.baseURL
-      if (baseUrl) {
-        await fetch(baseUrl.replace(/\/api\/pos\/?$/, '/api/health'), {
-          method: 'HEAD',
-          signal: controller.signal,
-          cache: 'no-store',
-        })
-      } else {
-        // Fallback: try Google if no API URL yet
-        await fetch('https://www.google.com/generate_204', {
-          method: 'HEAD',
-          mode: 'no-cors',
-          signal: controller.signal,
-          cache: 'no-store',
-        })
-      }
-
-      clearTimeout(timeoutId)
-      return true
-    } catch {
-      return false
-    }
+    return navigator.onLine
   }
 
   // Initialize the offline system

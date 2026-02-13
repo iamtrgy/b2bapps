@@ -36,16 +36,12 @@
       <!-- Stock Warnings -->
       <div
         v-if="stockWarnings && stockWarnings.length > 0"
-        class="p-3 rounded-lg bg-destructive/10 border border-destructive/20 space-y-1.5"
+        class="p-2.5 rounded-lg bg-destructive/10 border border-destructive/20"
       >
-        <div
-          v-for="warning in stockWarnings"
-          :key="warning.productId"
-          class="flex items-start gap-2"
-        >
-          <AlertCircle class="h-3.5 w-3.5 text-destructive flex-shrink-0 mt-0.5" />
-          <p class="text-xs text-destructive">
-            {{ warning.name }}: Sadece mevcut: {{ warning.stock }}
+        <div class="flex items-center gap-2">
+          <AlertCircle class="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+          <p class="text-xs text-destructive font-medium">
+            {{ stockWarnings.length }} ürün mevcut stoku aşıyor
           </p>
         </div>
       </div>

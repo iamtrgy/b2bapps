@@ -123,6 +123,7 @@ export const useCartStore = defineStore('cart', () => {
         availability_status: product.availability_status,
         allow_backorder: product.allow_backorder,
         is_preorder: product.is_preorder,
+        stock_quantity: product.stock_quantity,
       })
     }
   }
@@ -313,7 +314,7 @@ export const useCartStore = defineStore('cart', () => {
     returnReferenceOrderId.value = order.id
 
     items.value = order.items
-      .filter(item => item.quantity_ordered > 0)
+      .filter(item => (item.quantity_returnable ?? item.quantity_ordered) > 0)
       .map((item) => ({
         product_id: item.product_id,
         name: item.product_name,
@@ -323,7 +324,7 @@ export const useCartStore = defineStore('cart', () => {
         base_price: item.original_price ?? item.unit_price,
         total_discount: 0,
         total_discount_percent: 0,
-        quantity: item.quantity_ordered,
+        quantity: item.quantity_returnable ?? item.quantity_ordered,
         unit_type: item.unit_type,
         pieces_per_box: 1,
         vat_rate: item.vat_rate,
