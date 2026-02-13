@@ -66,6 +66,11 @@
             </template>
           </span>
         </div>
+
+        <!-- Stock Warning -->
+        <p v-if="stockWarning" class="text-[11px] text-destructive font-medium mt-0.5">
+          {{ stockWarning }}
+        </p>
       </div>
     </button>
 
@@ -372,6 +377,7 @@ interface PurchaseHistoryItem {
 interface Props {
   item: CartItem
   customerId?: number
+  stockWarning?: string
 }
 
 const props = defineProps<Props>()

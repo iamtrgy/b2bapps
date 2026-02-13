@@ -33,6 +33,23 @@
         <span class="text-xl font-bold" :class="isReturnMode ? 'text-destructive' : ''">{{ isReturnMode ? `-${formatPrice(total)}` : formatPrice(total) }}</span>
       </div>
 
+      <!-- Stock Warnings -->
+      <div
+        v-if="stockWarnings && stockWarnings.length > 0"
+        class="p-3 rounded-lg bg-destructive/10 border border-destructive/20 space-y-1.5"
+      >
+        <div
+          v-for="warning in stockWarnings"
+          :key="warning.productId"
+          class="flex items-start gap-2"
+        >
+          <AlertCircle class="h-3.5 w-3.5 text-destructive flex-shrink-0 mt-0.5" />
+          <p class="text-xs text-destructive">
+            {{ warning.name }}: Sadece mevcut: {{ warning.stock }}
+          </p>
+        </div>
+      </div>
+
       <!-- Notes -->
       <Input
         :model-value="notes"
@@ -57,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { Loader2 } from 'lucide-vue-next'
+import { Loader2, AlertCircle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -80,6 +97,7 @@ interface Props {
   isSubmitting?: boolean
   checkoutLabel?: string
   isReturnMode?: boolean
+  stockWarnings?: { productId: number; name: string; stock: number }[]
 }
 
 withDefaults(defineProps<Props>(), {
@@ -93,6 +111,7 @@ withDefaults(defineProps<Props>(), {
   pieceCount: 0,
   checkoutLabel: 'Sipariş Ver',
   isReturnMode: false,
+  stockWarnings: () => [],
 })
 
 defineEmits<{

@@ -356,6 +356,7 @@
               :key="`${item.product_id}-${item.unit_type}`"
               :item="item"
               :customer-id="selectedCustomer?.id"
+              :stock-warning="getStockWarning(item.product_id)"
               @update="(qty, price, boxP, pieceP) => handleUpdateQuantity(index, qty, price, boxP, pieceP)"
               @remove="handleRemoveItem(index)"
               @unit-type-change="(type) => cartStore.updateItemUnitType(index, type)"
@@ -379,6 +380,7 @@
           :is-submitting="isSubmitting"
           :checkout-label="isEditMode ? 'Siparişi Güncelle' : 'Sipariş Ver'"
           :is-return-mode="isReturnMode"
+          :stock-warnings="stockWarnings"
           @update:notes="cartStore.setNotes"
           @checkout="handleCheckout"
         />
@@ -477,6 +479,7 @@
                 :key="`mobile-${item.product_id}-${item.unit_type}`"
                 :item="item"
                 :customer-id="selectedCustomer?.id"
+                :stock-warning="getStockWarning(item.product_id)"
                 @update="(qty, price, boxP, pieceP) => handleUpdateQuantity(index, qty, price, boxP, pieceP)"
                 @remove="handleRemoveItem(index)"
                 @unit-type-change="(type) => cartStore.updateItemUnitType(index, type)"
@@ -501,6 +504,7 @@
               :is-submitting="isSubmitting"
               :checkout-label="isEditMode ? 'Siparişi Güncelle' : 'Sipariş Ver'"
               :is-return-mode="isReturnMode"
+              :stock-warnings="stockWarnings"
               @update:notes="cartStore.setNotes"
               @checkout="handleMobileCheckout"
             />
@@ -1243,6 +1247,27 @@ const canCheckout = computed(() => {
   return !!selectedCustomer.value && !cartStore.isEmpty
 })
 
+// Stock warnings for cart items that exceed available stock
+const stockWarnings = computed(() => {
+  const warnings: { productId: number; name: string; stock: number }[] = []
+  for (const item of cartStore.items) {
+    const product = productStore.displayProducts.find(p => p.id === item.product_id)
+    if (product && product.stock_quantity > 0) {
+      const piecesPerBox = item.pieces_per_box || 1
+      const totalPieces = item.unit_type === 'box' ? item.quantity * piecesPerBox : item.quantity
+      if (totalPieces > product.stock_quantity) {
+        warnings.push({ productId: item.product_id, name: item.name, stock: product.stock_quantity })
+      }
+    }
+  }
+  return warnings
+})
+
+function getStockWarning(productId: number): string | undefined {
+  const w = stockWarnings.value.find(w => w.productId === productId)
+  return w ? `Mevcut stoku aşıyor` : undefined
+}
+
 watch(selectedCustomer, (customer) => {
   if (customer) {
     cartStore.setCustomer(customer)
@@ -1350,18 +1375,16 @@ function addProductToCart(product: Product) {
   const addingPieces = unitType === 'box' ? quantity * piecesPerBox : quantity
   const totalPieces = currentPieces + addingPieces
 
+  cartStore.addItem(product, quantity, unitType)
+
   if (product.stock_quantity > 0 && totalPieces > product.stock_quantity) {
-    // Show low stock warning and block add
-    lowStockMessage.value = `Stokta sadece ${product.stock_quantity} adet var`
+    lowStockMessage.value = `${product.name}: Sadece mevcut: ${product.stock_quantity}`
     showLowStockWarning.value = true
     if (lowStockTimeout) clearTimeout(lowStockTimeout)
     lowStockTimeout = setTimeout(() => {
       showLowStockWarning.value = false
     }, 3000)
-    return // Don't add to cart
   }
-
-  cartStore.addItem(product, quantity, unitType)
 
   // Show success toast
   showAddedToast.value = true
@@ -1460,33 +1483,6 @@ function handleRemoveItem(index: number) {
 }
 
 function handleUpdateQuantity(index: number, newQty: number, customPrice?: number, boxPrice?: number, piecePrice?: number) {
-  const item = cartStore.items[index]
-  if (!item) return
-
-  // Decreasing is always allowed
-  if (newQty < item.quantity) {
-    cartStore.updateQuantity(index, newQty, customPrice, boxPrice, piecePrice)
-    return
-  }
-
-  // Increasing - check stock only if product found with stock limit
-  const product = productStore.displayProducts.find(p => p.id === item.product_id)
-
-  if (product && product.stock_quantity > 0) {
-    const piecesPerBox = item.pieces_per_box || 1
-    const totalPieces = item.unit_type === 'box' ? newQty * piecesPerBox : newQty
-
-    if (totalPieces > product.stock_quantity) {
-      lowStockMessage.value = `Stokta sadece ${product.stock_quantity} adet var`
-      showLowStockWarning.value = true
-      if (lowStockTimeout) clearTimeout(lowStockTimeout)
-      lowStockTimeout = setTimeout(() => {
-        showLowStockWarning.value = false
-      }, 3000)
-      return
-    }
-  }
-
   cartStore.updateQuantity(index, newQty, customPrice, boxPrice, piecePrice)
 }
 
