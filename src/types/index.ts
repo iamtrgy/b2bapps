@@ -46,6 +46,7 @@ export interface CustomerRecentOrder {
 export interface Customer {
   id: number
   afas_debtor_id?: string
+  afas_customer_code?: string
   company_name: string
   contact_name: string
   contact_email: string
