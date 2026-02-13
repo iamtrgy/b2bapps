@@ -330,6 +330,15 @@
 
           <!-- Actions -->
           <div class="grid grid-cols-2 gap-2">
+            <Button
+              v-if="orderDetail?.status === 'pending'"
+              variant="outline"
+              class="h-10 text-sm gap-1.5"
+              @click="handleEditOrder"
+            >
+              <Pencil class="h-4 w-4" />
+              Düzenle
+            </Button>
             <Button variant="outline" class="h-10 text-sm gap-1.5" @click="handlePrint('proforma')">
               <Printer class="h-4 w-4" />
               Proforma
@@ -598,6 +607,7 @@ import {
   Check,
   RefreshCw,
   ClipboardList,
+  Pencil,
 } from 'lucide-vue-next'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { Button } from '@/components/ui/button'
@@ -990,6 +1000,12 @@ function goToOrderDetail() {
   if (!orderDetail.value) return
   showOrderDetail.value = false
   router.push(`/orders/${orderDetail.value.id}`)
+}
+
+function handleEditOrder() {
+  if (!orderDetail.value) return
+  showOrderDetail.value = false
+  router.push(`/pos?editOrderId=${orderDetail.value.id}`)
 }
 
 onMounted(() => {

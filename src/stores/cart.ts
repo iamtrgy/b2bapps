@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { CartItem, Product, Promotion, Customer } from '@/types'
+import type { CartItem, Product, Promotion, Customer, Order, ReturnableOrder } from '@/types'
 
 export const useCartStore = defineStore('cart', () => {
   // State
@@ -10,6 +10,9 @@ export const useCartStore = defineStore('cart', () => {
   const notes = ref('')
   const appliedPromotions = ref<Promotion[]>([])
   const couponCode = ref<string | null>(null)
+  const editingOrderId = ref<number | null>(null)
+  const returnMode = ref(false)
+  const returnReferenceOrderId = ref<number | null>(null)
 
   // Getters
   const itemCount = computed(() => items.value.length)
@@ -213,6 +216,26 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   function getOrderPayload() {
+    if (returnMode.value) {
+      const payload: any = {
+        customer_id: customerId.value!,
+        type: 'return',
+        items: items.value.map((item) => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+          price: item.price,
+          original_price: item.base_price,
+          unit_type: item.unit_type,
+          vat_rate: item.vat_rate,
+        })),
+        notes: notes.value || undefined,
+      }
+      if (returnReferenceOrderId.value) {
+        payload.return_reference_order_id = returnReferenceOrderId.value
+      }
+      return payload
+    }
+
     return {
       customer_id: customerId.value!,
       items: items.value.map((item) => ({
@@ -232,6 +255,85 @@ export const useCartStore = defineStore('cart', () => {
     }
   }
 
+  function loadOrderForEditing(order: Order) {
+    editingOrderId.value = order.id
+
+    // Set customer without clearing cart
+    const cId = order.customer_id || order.customer?.id
+    if (cId) {
+      customerId.value = cId
+      customer.value = order.customer || null
+    }
+
+    // Map OrderItem[] to CartItem[]
+    items.value = order.items.map((item) => ({
+      product_id: item.product_id || item.product?.id || 0,
+      name: item.product?.name || '',
+      sku: item.product?.sku || '',
+      image_url: item.product?.image_url || null,
+      price: item.unit_price,
+      base_price: item.unit_type === 'box'
+        ? item.unit_price / (item.pieces_per_box || item.product?.pieces_per_box || 1)
+        : item.unit_price,
+      total_discount: 0,
+      total_discount_percent: 0,
+      quantity: item.quantity_ordered,
+      unit_type: item.unit_type,
+      pieces_per_box: item.pieces_per_box || item.product?.pieces_per_box || 1,
+      vat_rate: item.vat_rate,
+      allow_broken_case: false,
+      broken_case_piece_price: item.unit_type === 'piece' ? item.unit_price : 0,
+      box_price: item.unit_type === 'box' ? item.unit_price : 0,
+      availability_status: item.availability_status,
+      allow_backorder: item.allow_backorder,
+      is_preorder: item.is_preorder,
+    }))
+
+    notes.value = order.notes || ''
+    appliedPromotions.value = []
+    couponCode.value = null
+  }
+
+  function clearEditMode() {
+    editingOrderId.value = null
+  }
+
+  function enterReturnMode() {
+    returnMode.value = true
+    clear()
+  }
+
+  function exitReturnMode() {
+    returnMode.value = false
+    returnReferenceOrderId.value = null
+    clear()
+  }
+
+  function loadReturnItems(order: ReturnableOrder) {
+    returnReferenceOrderId.value = order.id
+
+    items.value = order.items
+      .filter(item => item.quantity_ordered > 0)
+      .map((item) => ({
+        product_id: item.product_id,
+        name: item.product_name,
+        sku: item.product_sku,
+        image_url: item.image_url,
+        price: item.unit_price,
+        base_price: item.original_price ?? item.unit_price,
+        total_discount: 0,
+        total_discount_percent: 0,
+        quantity: item.quantity_ordered,
+        unit_type: item.unit_type,
+        pieces_per_box: 1,
+        vat_rate: item.vat_rate,
+      }))
+
+    notes.value = ''
+    appliedPromotions.value = []
+    couponCode.value = null
+  }
+
   return {
     // State
     items,
@@ -241,6 +343,9 @@ export const useCartStore = defineStore('cart', () => {
     appliedPromotions,
     couponCode,
     lastRemovedItem,
+    editingOrderId,
+    returnMode,
+    returnReferenceOrderId,
     // Getters
     itemCount,
     totalQuantity,
@@ -265,5 +370,10 @@ export const useCartStore = defineStore('cart', () => {
     setCouponCode,
     clear,
     getOrderPayload,
+    loadOrderForEditing,
+    clearEditMode,
+    enterReturnMode,
+    exitReturnMode,
+    loadReturnItems,
   }
 })

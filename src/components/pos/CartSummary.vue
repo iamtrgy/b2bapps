@@ -4,7 +4,7 @@
     <div class="p-4 md:p-3 space-y-2">
       <div class="flex justify-between text-sm">
         <span class="text-muted-foreground">Ara Toplam</span>
-        <span class="font-medium">{{ formatPrice(subtotal) }}</span>
+        <span class="font-medium">{{ isReturnMode ? `-${formatPrice(subtotal)}` : formatPrice(subtotal) }}</span>
       </div>
       <div v-if="discount > 0" class="flex justify-between text-sm">
         <span class="text-muted-foreground">İndirim</span>
@@ -30,7 +30,7 @@
             <span v-if="pieceCount > 0">{{ pieceCount }} adet</span>
           </p>
         </div>
-        <span class="text-xl font-bold">{{ formatPrice(total) }}</span>
+        <span class="text-xl font-bold" :class="isReturnMode ? 'text-destructive' : ''">{{ isReturnMode ? `-${formatPrice(total)}` : formatPrice(total) }}</span>
       </div>
 
       <!-- Notes -->
@@ -45,11 +45,12 @@
       <!-- Checkout Button -->
       <Button
         :disabled="!canCheckout || isSubmitting"
+        :variant="isReturnMode ? 'destructive' : 'default'"
         class="w-full h-12 rounded-xl text-base font-medium"
         @click="$emit('checkout')"
       >
         <Loader2 v-if="isSubmitting" class="h-5 w-5 mr-2 animate-spin" />
-        Sipariş Ver
+        {{ isReturnMode ? `İade Oluştur (-${formatPrice(total)})` : checkoutLabel }}
       </Button>
     </div>
   </div>
@@ -77,6 +78,8 @@ interface Props {
   notes?: string
   canCheckout?: boolean
   isSubmitting?: boolean
+  checkoutLabel?: string
+  isReturnMode?: boolean
 }
 
 withDefaults(defineProps<Props>(), {
@@ -88,6 +91,8 @@ withDefaults(defineProps<Props>(), {
   itemCount: 0,
   boxCount: 0,
   pieceCount: 0,
+  checkoutLabel: 'Sipariş Ver',
+  isReturnMode: false,
 })
 
 defineEmits<{

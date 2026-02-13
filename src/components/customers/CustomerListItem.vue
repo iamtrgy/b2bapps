@@ -14,7 +14,10 @@
 
     <div class="flex-1 min-w-0">
       <p class="text-sm font-semibold truncate">{{ customer.company_name }}</p>
-      <p class="text-sm text-muted-foreground truncate">{{ customer.shipping_address?.city || customer.billing_address?.city || '-' }}</p>
+      <p class="text-sm text-muted-foreground truncate">
+        <span v-if="showAfasCode && customer.afas_debtor_id" class="font-medium">{{ customer.afas_debtor_id }} &bull; </span>
+        {{ customer.shipping_address?.city || customer.billing_address?.city || '-' }}
+      </p>
     </div>
 
     <Badge variant="secondary" :class="['text-xs capitalize', tierBadgeClass]">
@@ -37,6 +40,7 @@ import type { Customer } from '@/types'
 const props = defineProps<{
   customer: Customer
   virtualStart: number
+  showAfasCode?: boolean
 }>()
 
 defineEmits<{

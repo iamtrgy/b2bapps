@@ -45,6 +45,7 @@ export interface CustomerRecentOrder {
 
 export interface Customer {
   id: number
+  afas_debtor_id?: string
   company_name: string
   contact_name: string
   contact_email: string
@@ -195,6 +196,8 @@ export interface Order {
   total: number
   notes: string | null
   status: string
+  type?: string
+  return_reference_order_id?: number
   created_at: string
   afas_synced?: boolean
   afas_order_id?: string | null
@@ -216,6 +219,31 @@ export interface CreateOrderRequest {
     promotion_id: number
     discount_amount: number
   }[]
+  type?: 'return'
+  return_reference_order_id?: number
+}
+
+// Returnable order types (for return flow)
+export interface ReturnableOrderItem {
+  product_id: number
+  product_name: string
+  product_sku: string
+  image_url: string | null
+  quantity_ordered: number
+  unit_price: number
+  original_price: number
+  unit_type: 'piece' | 'box'
+  vat_rate: number
+}
+
+export interface ReturnableOrder {
+  id: number
+  order_number: string
+  created_at: string
+  total_amount: number
+  status: string
+  already_returned: boolean
+  items: ReturnableOrderItem[]
 }
 
 // Promotion types

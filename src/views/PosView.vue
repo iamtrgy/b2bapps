@@ -24,11 +24,36 @@
                 </span>
               </button>
               <button
+                v-if="!isEditMode && !isReturnMode"
                 type="button"
                 class="p-1 rounded hover:bg-background/50 transition-colors"
                 @click="clearCustomer"
               >
                 <X class="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            </div>
+
+            <!-- Satış / İade Toggle -->
+            <div v-if="!isEditMode" class="flex items-center bg-muted rounded-lg p-0.5">
+              <button
+                type="button"
+                class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                :class="!isReturnMode
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'"
+                @click="isReturnMode ? exitReturnMode() : null"
+              >
+                Satış
+              </button>
+              <button
+                type="button"
+                class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                :class="isReturnMode
+                  ? 'bg-destructive text-destructive-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'"
+                @click="!isReturnMode ? handleReturnToggle() : null"
+              >
+                İade
               </button>
             </div>
 
@@ -258,6 +283,43 @@
         v-if="selectedCustomer"
         class="hidden md:flex md:w-80 lg:w-[340px] xl:w-[380px] bg-card border-l flex-col h-full min-h-0 pb-[calc(1rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]"
       >
+        <!-- Edit Mode Banner -->
+        <div v-if="isEditMode" class="px-4 py-2 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <Pencil class="h-3.5 w-3.5 text-amber-600" />
+            <span class="text-xs font-medium text-amber-800 dark:text-amber-200">Sipariş düzenleniyor</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            class="h-7 px-2 text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900"
+            @click="cancelEditMode"
+          >
+            İptal
+          </Button>
+        </div>
+
+        <!-- Return Mode Banner -->
+        <div v-if="isReturnMode" class="px-4 py-2 bg-red-50 dark:bg-red-950/30 border-b border-red-200 dark:border-red-800 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <RotateCcw class="h-3.5 w-3.5 text-red-600" />
+            <span class="text-xs font-medium text-red-800 dark:text-red-200">
+              İade Modu
+              <span v-if="cartStore.returnReferenceOrderId" class="text-red-600 dark:text-red-400">
+                (#{{ cartStore.returnReferenceOrderId }})
+              </span>
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            class="h-7 px-2 text-xs text-red-700 dark:text-red-300 hover:text-red-900"
+            @click="exitReturnMode"
+          >
+            İptal
+          </Button>
+        </div>
+
         <!-- Cart Header -->
         <div class="px-4 py-3 border-b flex items-center justify-between">
           <div class="flex items-center gap-2">
@@ -315,6 +377,8 @@
           :notes="cartStore.notes"
           :can-checkout="canCheckout"
           :is-submitting="isSubmitting"
+          :checkout-label="isEditMode ? 'Siparişi Güncelle' : 'Sipariş Ver'"
+          :is-return-mode="isReturnMode"
           @update:notes="cartStore.setNotes"
           @checkout="handleCheckout"
         />
@@ -339,6 +403,43 @@
       <!-- Mobile Cart Sheet -->
       <Sheet v-model:open="showMobileCart">
         <SheetContent side="bottom" class="h-[85vh] flex flex-col !px-0 !pt-0">
+          <!-- Edit Mode Banner (Mobile) -->
+          <div v-if="isEditMode" class="px-4 py-2 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <Pencil class="h-3.5 w-3.5 text-amber-600" />
+              <span class="text-xs font-medium text-amber-800 dark:text-amber-200">Sipariş düzenleniyor</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              class="h-7 px-2 text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900"
+              @click="cancelEditMode"
+            >
+              İptal
+            </Button>
+          </div>
+
+          <!-- Return Mode Banner (Mobile) -->
+          <div v-if="isReturnMode" class="px-4 py-2 bg-red-50 dark:bg-red-950/30 border-b border-red-200 dark:border-red-800 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <RotateCcw class="h-3.5 w-3.5 text-red-600" />
+              <span class="text-xs font-medium text-red-800 dark:text-red-200">
+                İade Modu
+                <span v-if="cartStore.returnReferenceOrderId" class="text-red-600 dark:text-red-400">
+                  (#{{ cartStore.returnReferenceOrderId }})
+                </span>
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              class="h-7 px-2 text-xs text-red-700 dark:text-red-300 hover:text-red-900"
+              @click="exitReturnMode"
+            >
+              İptal
+            </Button>
+          </div>
+
           <SheetHeader class="px-4 py-3 border-b">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
@@ -398,6 +499,8 @@
               :notes="cartStore.notes"
               :can-checkout="canCheckout"
               :is-submitting="isSubmitting"
+              :checkout-label="isEditMode ? 'Siparişi Güncelle' : 'Sipariş Ver'"
+              :is-return-mode="isReturnMode"
               @update:notes="cartStore.setNotes"
               @checkout="handleMobileCheckout"
             />
@@ -563,20 +666,24 @@
       <DialogContent class="max-w-sm text-center">
         <div
           class="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4"
-          :class="savedOffline ? 'bg-amber-100' : 'bg-green-100'"
+          :class="savedOffline ? 'bg-amber-100' : (orderJustReturned ? 'bg-red-100' : 'bg-green-100')"
         >
           <CloudOff v-if="savedOffline" class="h-10 w-10 text-amber-600" />
+          <RotateCcw v-else-if="orderJustReturned" class="h-10 w-10 text-red-600" />
           <CheckCircle v-else class="h-10 w-10 text-green-600" />
         </div>
 
         <DialogHeader>
-          <DialogTitle>{{ savedOffline ? 'Sipariş Kaydedildi!' : 'Sipariş Verildi!' }}</DialogTitle>
+          <DialogTitle>{{ savedOffline ? 'Sipariş Kaydedildi!' : (orderJustUpdated ? 'Sipariş Güncellendi!' : (orderJustReturned ? 'İade Oluşturuldu!' : 'Sipariş Verildi!')) }}</DialogTitle>
           <DialogDescription>
             <template v-if="savedOffline">
               Sipariş çevrimdışı olarak kaydedildi. İnternet bağlantısı sağlandığında otomatik olarak gönderilecek.
             </template>
+            <template v-else-if="orderJustReturned">
+              İade <span class="font-semibold text-foreground">{{ lastOrderNumber }}</span> başarıyla oluşturuldu
+            </template>
             <template v-else>
-              Sipariş <span class="font-semibold text-foreground">{{ lastOrderNumber }}</span> başarıyla oluşturuldu
+              Sipariş <span class="font-semibold text-foreground">{{ lastOrderNumber }}</span> başarıyla {{ orderJustUpdated ? 'güncellendi' : 'oluşturuldu' }}
             </template>
           </DialogDescription>
         </DialogHeader>
@@ -605,6 +712,77 @@
         <DialogFooter class="flex-col gap-2 sm:flex-col">
           <Button variant="destructive" class="w-full" @click="confirmClearCart">Sepeti Temizle</Button>
           <Button variant="outline" class="w-full" @click="showClearCartConfirm = false">Vazgeç</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Returnable Orders Modal -->
+    <Dialog v-model:open="showReturnableOrders">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle>İade Edilecek Sipariş</DialogTitle>
+          <DialogDescription>
+            Hangi siparişi iade etmek istiyorsunuz?
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="max-h-80 overflow-y-auto space-y-2">
+          <div v-if="isLoadingReturnableOrders" class="flex items-center justify-center py-8">
+            <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+
+          <div v-else-if="returnableOrders.length === 0" class="py-8 text-center">
+            <RotateCcw class="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+            <p class="text-sm text-muted-foreground">İade edilebilir sipariş bulunamadı</p>
+          </div>
+
+          <template v-else>
+            <button
+              v-for="order in returnableOrders"
+              :key="order.id"
+              type="button"
+              class="w-full flex items-center justify-between p-3 rounded-lg border text-left transition-colors"
+              :class="order.already_returned
+                ? 'opacity-50 cursor-not-allowed bg-muted'
+                : 'bg-card hover:bg-accent'"
+              :disabled="order.already_returned"
+              @click="!order.already_returned && selectReturnableOrder(order)"
+            >
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <p class="text-sm font-medium">{{ order.order_number }}</p>
+                  <Badge
+                    v-if="order.already_returned"
+                    variant="secondary"
+                    class="text-[10px] bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400"
+                  >
+                    Zaten İade Edildi
+                  </Badge>
+                </div>
+                <p class="text-xs text-muted-foreground mt-0.5">
+                  {{ formatDate(order.created_at) }} · {{ order.items.length }} ürün
+                </p>
+              </div>
+              <span class="text-sm font-semibold ml-3">{{ formatPrice(order.total_amount) }}</span>
+            </button>
+          </template>
+        </div>
+
+        <DialogFooter class="flex-col gap-2 sm:flex-col">
+          <Button
+            variant="outline"
+            class="w-full"
+            @click="skipReturnableOrderSelection"
+          >
+            Atla (ürünleri manuel ekle)
+          </Button>
+          <Button
+            variant="ghost"
+            class="w-full"
+            @click="showReturnableOrders = false"
+          >
+            Vazgeç
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -863,7 +1041,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import {
   Search,
   Users,
@@ -883,6 +1061,8 @@ import {
   ChevronRight,
   ChevronDown,
   CloudOff,
+  Pencil,
+  RotateCcw,
 } from 'lucide-vue-next'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import ProductCard from '@/components/pos/ProductCard.vue'
@@ -915,9 +1095,10 @@ import { useCustomerStore } from '@/stores/customer'
 import { useCategoryStore } from '@/stores/category'
 import { useOfflineStore } from '@/stores/offline'
 import { orderApi, customerApi, productApi } from '@/services/api'
-import type { Customer, Product } from '@/types'
+import type { Customer, Product, ReturnableOrder } from '@/types'
 
 const router = useRouter()
+const route = useRoute()
 const cartStore = useCartStore()
 const productStore = useProductStore()
 const customerStore = useCustomerStore()
@@ -993,6 +1174,11 @@ const productDetailHistory = ref<Array<{
 }>>([])
 const isLoadingProductHistory = ref(false)
 
+// Return mode
+const showReturnableOrders = ref(false)
+const returnableOrders = ref<ReturnableOrder[]>([])
+const isLoadingReturnableOrders = ref(false)
+
 const CUSTOMER_STORAGE_KEY = 'pos_selected_customer'
 
 // Infinite scroll handler
@@ -1051,6 +1237,8 @@ function loadCustomerFromStorage(): Customer | null {
   return null
 }
 
+const isEditMode = computed(() => !!cartStore.editingOrderId)
+
 const canCheckout = computed(() => {
   return !!selectedCustomer.value && !cartStore.isEmpty
 })
@@ -1097,6 +1285,7 @@ function formatDate(dateString: string | null | undefined): string {
 }
 
 function clearCustomer() {
+  if (isEditMode.value || isReturnMode.value) return // Prevent clearing customer in edit/return mode
   selectedCustomer.value = null
   saveCustomerToStorage(null)
   searchQuery.value = ''
@@ -1355,15 +1544,45 @@ function handleKeyDown(event: KeyboardEvent) {
 }
 
 const savedOffline = ref(false)
+const orderJustUpdated = ref(false)
+const orderJustReturned = ref(false)
 
 async function handleCheckout() {
   if (!canCheckout.value || !selectedCustomer.value) return
 
   isSubmitting.value = true
   savedOffline.value = false
+  orderJustUpdated.value = false
+  orderJustReturned.value = false
 
   try {
-    if (offlineStore.isOnline) {
+    if (isReturnMode.value) {
+      // Return mode: create return order
+      const payload = cartStore.getOrderPayload()
+      const result = await orderApi.create(payload)
+
+      if (result.success) {
+        lastOrderId.value = result.order_id
+        lastOrderNumber.value = result.order_number
+        orderJustReturned.value = true
+        cartStore.exitReturnMode()
+        showOrderSuccess.value = true
+      }
+    } else if (isEditMode.value) {
+      // Edit mode: update existing order
+      const payload = cartStore.getOrderPayload()
+      const result = await orderApi.update(cartStore.editingOrderId!, payload)
+
+      if (result.success) {
+        lastOrderId.value = result.order_id
+        lastOrderNumber.value = result.order_number
+        orderJustUpdated.value = true
+        cartStore.clear()
+        cartStore.clearEditMode()
+        router.replace('/pos')
+        showOrderSuccess.value = true
+      }
+    } else if (offlineStore.isOnline) {
       // Online: send to server
       const payload = cartStore.getOrderPayload()
       const result = await orderApi.create(payload)
@@ -1401,11 +1620,22 @@ async function handleCheckout() {
       showOrderSuccess.value = true
       cartStore.clear()
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to create order:', error)
 
-    // If online request fails, try saving offline
-    if (selectedCustomer.value) {
+    // In edit mode, show error to user (no offline fallback)
+    if (isEditMode.value) {
+      const msg = error.response?.data?.message || 'Sipariş güncellenirken bir hata oluştu'
+      lowStockMessage.value = msg
+      showLowStockWarning.value = true
+      if (lowStockTimeout) clearTimeout(lowStockTimeout)
+      lowStockTimeout = setTimeout(() => {
+        showLowStockWarning.value = false
+      }, 5000)
+    }
+
+    // If online request fails, try saving offline (only for new orders)
+    if (!isEditMode.value && selectedCustomer.value) {
       try {
         const localId = await offlineStore.saveOrderOffline({
           customerId: selectedCustomer.value.id,
@@ -1445,10 +1675,53 @@ async function handleMobileCheckout() {
   await handleCheckout()
 }
 
+function cancelEditMode() {
+  cartStore.clear()
+  cartStore.clearEditMode()
+  router.replace('/pos')
+}
+
+const isReturnMode = computed(() => cartStore.returnMode)
+
+async function handleReturnToggle() {
+  if (!selectedCustomer.value) return
+
+  isLoadingReturnableOrders.value = true
+  showReturnableOrders.value = true
+  returnableOrders.value = []
+
+  try {
+    const response = await customerApi.getReturnableOrders(selectedCustomer.value.id)
+    console.log('Returnable orders API response:', JSON.stringify(response, null, 2))
+    returnableOrders.value = response.data || []
+  } catch (error) {
+    console.error('Failed to fetch returnable orders:', error)
+  } finally {
+    isLoadingReturnableOrders.value = false
+  }
+}
+
+function selectReturnableOrder(order: ReturnableOrder) {
+  cartStore.enterReturnMode()
+  cartStore.loadReturnItems(order)
+  showReturnableOrders.value = false
+}
+
+function skipReturnableOrderSelection() {
+  cartStore.enterReturnMode()
+  showReturnableOrders.value = false
+}
+
+function exitReturnMode() {
+  cartStore.exitReturnMode()
+}
+
 function handleOrderSuccessClose() {
   showOrderSuccess.value = false
   lastOrderId.value = null
   lastOrderNumber.value = ''
+  orderJustUpdated.value = false
+  orderJustReturned.value = false
 }
 
 function viewOrder() {
@@ -1459,13 +1732,33 @@ function viewOrder() {
 }
 
 onMounted(async () => {
-  const storedCustomer = loadCustomerFromStorage()
-  if (storedCustomer) {
-    selectedCustomer.value = storedCustomer
-    cartStore.setCustomer(storedCustomer)
-    categoryStore.fetchCategories()
-    productStore.loadBestSellers(storedCustomer.id)
-    activeCategoryTab.value = 'best-sellers'
+  // Check for edit mode via query param
+  const editOrderId = route.query.editOrderId
+  if (editOrderId) {
+    try {
+      const order = await orderApi.get(Number(editOrderId))
+      cartStore.loadOrderForEditing(order)
+
+      // Set the selected customer from the order
+      if (order.customer) {
+        selectedCustomer.value = order.customer
+        saveCustomerToStorage(order.customer)
+        categoryStore.fetchCategories()
+        productStore.loadBestSellers(order.customer.id)
+        activeCategoryTab.value = 'best-sellers'
+      }
+    } catch (error) {
+      console.error('Failed to load order for editing:', error)
+    }
+  } else {
+    const storedCustomer = loadCustomerFromStorage()
+    if (storedCustomer) {
+      selectedCustomer.value = storedCustomer
+      cartStore.setCustomer(storedCustomer)
+      categoryStore.fetchCategories()
+      productStore.loadBestSellers(storedCustomer.id)
+      activeCategoryTab.value = 'best-sellers'
+    }
   }
 
   if (customerStore.customers.length === 0) {

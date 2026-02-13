@@ -71,6 +71,7 @@
                     {{ customer.company_name }}
                   </p>
                   <p class="text-xs text-gray-500 truncate">
+                    <span v-if="hasAfas && customer.afas_debtor_id">{{ customer.afas_debtor_id }} &bull; </span>
                     {{ customer.contact_name }} &bull; {{ customer.contact_email }}
                   </p>
                 </div>
@@ -99,6 +100,7 @@ import {
 } from '@headlessui/vue'
 import { UserGroupIcon, ChevronUpDownIcon, CheckIcon } from '@heroicons/vue/24/outline'
 import { useCustomerStore } from '@/stores/customer'
+import { useAuthStore } from '@/stores/auth'
 import Loading from '@/components/ui/Loading.vue'
 import type { Customer } from '@/types'
 
@@ -108,7 +110,9 @@ const emit = defineEmits<{
 }>()
 
 const customerStore = useCustomerStore()
+const authStore = useAuthStore()
 
+const hasAfas = computed(() => authStore.tenant?.afas_enabled ?? false)
 const query = ref('')
 const selectedCustomer = ref<Customer | null>(null)
 

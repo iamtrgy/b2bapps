@@ -12,6 +12,7 @@ import type {
   Product,
   User,
   Category,
+  ReturnableOrder,
 } from '@/types'
 
 // Create axios instance
@@ -112,6 +113,11 @@ export const customerApi = {
     const response = await api.get(`/customers/${id}`)
     // API returns { success: true, customer: {...} }
     return response.data.customer ?? response.data.data ?? response.data
+  },
+
+  getReturnableOrders: async (customerId: number): Promise<{ success: boolean; data: ReturnableOrder[] }> => {
+    const response = await api.get(`/customers/${customerId}/returnable-orders`)
+    return response.data
   },
 }
 
@@ -282,6 +288,14 @@ export const orderApi = {
     order: CreateOrderRequest
   ): Promise<{ success: boolean; order_id: number; order_number: string; message: string }> => {
     const response = await api.post('/orders', order)
+    return response.data
+  },
+
+  update: async (
+    id: number,
+    order: CreateOrderRequest
+  ): Promise<{ success: boolean; order_id: number; order_number: string; message: string }> => {
+    const response = await api.put(`/orders/${id}`, order)
     return response.data
   },
 

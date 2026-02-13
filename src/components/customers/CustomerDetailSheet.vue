@@ -9,6 +9,9 @@
           </AvatarFallback>
         </Avatar>
         <SheetTitle class="text-base">{{ customer?.company_name }}</SheetTitle>
+        <p v-if="hasAfas && customer?.afas_debtor_id" class="text-xs text-muted-foreground">
+          {{ customer.afas_customer_code }}
+        </p>
         <Badge variant="secondary" :class="['capitalize mx-auto mt-1 text-xs', tierBadgeClass]">
           {{ customer?.customer_tier }}
         </Badge>
@@ -147,6 +150,7 @@ import { Separator } from '@/components/ui/separator'
 import InfoRow from './InfoRow.vue'
 import { useFormatters } from '@/composables/useFormatters'
 import { useCustomerCache } from '@/composables/useCustomerCache'
+import { useAuthStore } from '@/stores/auth'
 import { TIER_COLORS, TIER_BADGE_COLORS, UI_TEXT } from '@/constants/customers'
 import type { Customer, Order, CustomerRecentOrder } from '@/types'
 
@@ -167,6 +171,8 @@ defineEmits<{
 
 const { formatPrice, formatDate } = useFormatters()
 const { getInitials } = useCustomerCache()
+const authStore = useAuthStore()
+const hasAfas = computed(() => authStore.tenant?.afas_enabled ?? false)
 
 const activeTab = ref<string>('info')
 

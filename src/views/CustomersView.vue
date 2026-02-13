@@ -22,9 +22,9 @@
           <Input
             v-model="searchQuery"
             type="text"
-            :placeholder="UI_TEXT.searchPlaceholder"
+            :placeholder="searchPlaceholder"
             class="pl-10 h-11 text-sm"
-            :aria-label="UI_TEXT.searchPlaceholder"
+            :aria-label="searchPlaceholder"
             @focus="(e: FocusEvent) => { const el = e.target as HTMLInputElement; el.select(); el.addEventListener('mouseup', (m) => m.preventDefault(), { once: true }) }"
             @input="handleSearch"
           />
@@ -79,7 +79,10 @@
               </Avatar>
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-semibold truncate">{{ customer.company_name }}</p>
-                <p class="text-xs text-muted-foreground truncate">{{ customer.shipping_address?.city || customer.billing_address?.city || '-' }}</p>
+                <p class="text-xs text-muted-foreground truncate">
+                  <span v-if="hasAfas && customer.afas_debtor_id" class="font-medium">{{ customer.afas_debtor_id }} &bull; </span>
+                  {{ customer.shipping_address?.city || customer.billing_address?.city || '-' }}
+                </p>
               </div>
               <Badge variant="secondary" :class="['text-xs capitalize', getTierBadgeColor(customer.customer_tier)]">
                 {{ customer.customer_tier }}
@@ -101,6 +104,7 @@
                 :key="customers[virtualRow.index].id"
                 :customer="customers[virtualRow.index]"
                 :virtual-start="virtualRow.start"
+                :show-afas-code="hasAfas"
                 @click="handleCustomerClick(customers[virtualRow.index])"
               />
             </div>
@@ -143,6 +147,7 @@
       :order="orderDetail"
       :is-loading="isLoadingOrderDetail"
       @update:open="showOrderDetail = $event"
+      @edit-order="handleEditOrder"
     />
   </AppLayout>
 </template>
@@ -159,6 +164,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { CustomerListItem, CustomerDetailSheet, OrderDetailSheet } from '@/components/customers'
 import { useCustomerCache } from '@/composables/useCustomerCache'
+import { useAuthStore } from '@/stores/auth'
 import { customerApi, orderApi } from '@/services/api'
 import {
   UI_TEXT,
@@ -172,7 +178,13 @@ import {
 import type { Customer, Order, CustomerRecentOrder } from '@/types'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const { getCachedCustomer, setCachedCustomer, getInitials } = useCustomerCache()
+
+const hasAfas = computed(() => authStore.tenant?.afas_enabled ?? false)
+const searchPlaceholder = computed(() =>
+  hasAfas.value ? 'Müşteri adı veya kodu ile ara...' : 'Müşteri ara...'
+)
 
 function getTierColor(tier: string): string {
   return TIER_COLORS[tier as keyof typeof TIER_COLORS] || 'bg-muted'
@@ -366,6 +378,12 @@ function selectForPOS(): void {
     localStorage.setItem('pos_selected_customer', JSON.stringify(customerDetail.value))
     router.push('/pos')
   }
+}
+
+function handleEditOrder(orderId: number): void {
+  showOrderDetail.value = false
+  showDetail.value = false
+  router.push(`/pos?editOrderId=${orderId}`)
 }
 
 // Cleanup state when detail sheet closes

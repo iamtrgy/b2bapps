@@ -52,7 +52,8 @@ export const useCustomerStore = defineStore('customer', () => {
           customers.value = cachedCustomers.filter(c =>
             c.company_name.toLowerCase().includes(searchLower) ||
             c.contact_name?.toLowerCase().includes(searchLower) ||
-            c.contact_email?.toLowerCase().includes(searchLower)
+            c.contact_email?.toLowerCase().includes(searchLower) ||
+            c.afas_debtor_id?.toLowerCase().includes(searchLower)
           ) as unknown as Customer[]
         } else {
           customers.value = cachedCustomers as unknown as Customer[]
@@ -73,7 +74,8 @@ export const useCustomerStore = defineStore('customer', () => {
           customers.value = cachedCustomers.filter(c =>
             c.company_name.toLowerCase().includes(searchLower) ||
             c.contact_name?.toLowerCase().includes(searchLower) ||
-            c.contact_email?.toLowerCase().includes(searchLower)
+            c.contact_email?.toLowerCase().includes(searchLower) ||
+            c.afas_debtor_id?.toLowerCase().includes(searchLower)
           ) as unknown as Customer[]
         } else {
           customers.value = cachedCustomers as unknown as Customer[]

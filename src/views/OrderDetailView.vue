@@ -35,6 +35,16 @@
                   {{ formatStatus(order.status) }}
                 </Badge>
                 <Button
+                  v-if="order.status === 'pending'"
+                  variant="outline"
+                  size="sm"
+                  class="h-8 text-xs gap-1.5"
+                  @click="router.push(`/pos?editOrderId=${order.id}`)"
+                >
+                  <Pencil class="h-3 w-3" />
+                  Düzenle
+                </Button>
+                <Button
                   v-if="!order.afas_synced"
                   size="sm"
                   class="h-8 text-xs gap-1.5"
@@ -205,8 +215,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { ArrowLeft, AlertCircle, ImageIcon, CheckCircle, Loader2, Cloud } from 'lucide-vue-next'
+import { useRoute, useRouter } from 'vue-router'
+import { ArrowLeft, AlertCircle, ImageIcon, CheckCircle, Loader2, Cloud, Pencil } from 'lucide-vue-next'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -216,6 +226,7 @@ import { orderApi } from '@/services/api'
 import type { Order } from '@/types'
 
 const route = useRoute()
+const router = useRouter()
 
 const order = ref<Order | null>(null)
 const isLoading = ref(false)

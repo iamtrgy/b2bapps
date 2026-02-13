@@ -229,6 +229,8 @@ export interface CachedProduct {
   customer_id: number
   name: string
   sku: string
+  barcode?: string | null
+  barcode_box?: string | null
   image_url: string | null
   base_price: number
   box_price: number
@@ -299,6 +301,7 @@ export async function clearProductCache(customerId?: number): Promise<void> {
 
 export interface CachedCustomer {
   id: number
+  afas_debtor_id?: string
   company_name: string
   contact_name: string | null
   contact_email: string | null

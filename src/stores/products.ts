@@ -89,7 +89,9 @@ export const useProductStore = defineStore('products', () => {
         const queryLower = query.toLowerCase()
         products.value = cachedProducts.filter(p =>
           p.name.toLowerCase().includes(queryLower) ||
-          p.sku?.toLowerCase().includes(queryLower)
+          p.sku?.toLowerCase().includes(queryLower) ||
+          p.barcode?.toLowerCase().includes(queryLower) ||
+          p.barcode_box?.toLowerCase().includes(queryLower)
         ) as unknown as Product[]
         isOfflineMode.value = true
       }
@@ -101,7 +103,9 @@ export const useProductStore = defineStore('products', () => {
         const queryLower = query.toLowerCase()
         products.value = cachedProducts.filter(p =>
           p.name.toLowerCase().includes(queryLower) ||
-          p.sku?.toLowerCase().includes(queryLower)
+          p.sku?.toLowerCase().includes(queryLower) ||
+          p.barcode?.toLowerCase().includes(queryLower) ||
+          p.barcode_box?.toLowerCase().includes(queryLower)
         ) as unknown as Product[]
         isOfflineMode.value = true
       } catch {

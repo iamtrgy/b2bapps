@@ -71,9 +71,20 @@
           </div>
         </div>
 
-        <Button variant="outline" class="w-full h-11 md:h-9 text-sm md:text-xs" @click="$emit('update:open', false)">
-          {{ UI_TEXT.back }}
-        </Button>
+        <div class="flex gap-2">
+          <Button
+            v-if="order?.status === 'pending'"
+            variant="outline"
+            class="flex-1 h-11 md:h-9 text-sm md:text-xs gap-1.5"
+            @click="order && emit('edit-order', order.id)"
+          >
+            <Pencil class="h-3.5 w-3.5" />
+            Düzenle
+          </Button>
+          <Button variant="outline" class="flex-1 h-11 md:h-9 text-sm md:text-xs" @click="emit('update:open', false)">
+            {{ UI_TEXT.back }}
+          </Button>
+        </div>
       </div>
     </SheetContent>
   </Sheet>
@@ -81,7 +92,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Loader2 } from 'lucide-vue-next'
+import { Loader2, Pencil } from 'lucide-vue-next'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -97,8 +108,9 @@ const props = defineProps<{
   isLoading: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   'update:open': [value: boolean]
+  'edit-order': [orderId: number]
 }>()
 
 const { formatPrice, formatDate, formatStatus } = useFormatters()
