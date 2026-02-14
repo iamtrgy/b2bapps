@@ -4,10 +4,10 @@
     class="bg-card rounded-xl overflow-hidden transition-all hover:shadow-md active:scale-[0.98] group text-left w-full"
     @click="handleClick"
   >
-    <!-- Product Image -->
-    <div class="relative aspect-[4/3] bg-white p-3">
+    <!-- Product Image (online only) -->
+    <div v-if="isOnline" class="relative aspect-[4/3] bg-white p-3">
       <img
-        v-if="product.image_url && isOnline"
+        v-if="product.image_url"
         :src="product.image_url"
         :alt="product.name"
         class="w-full h-full object-contain"
@@ -38,26 +38,41 @@
 
       <!-- Badges Container (top-left) -->
       <div class="absolute top-2 left-2 flex flex-col gap-1">
-        <!-- Discount Badge -->
         <div
           v-if="hasDiscount"
           class="bg-destructive text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md"
         >
           -{{ discountPercentage }}%
         </div>
-        <!-- Backorder Badge -->
         <div
           v-if="product.allow_backorder && product.availability_status === 'backorder'"
           class="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md"
         >
           Stoğa Bağlı
         </div>
-        <!-- Preorder Badge -->
         <div
           v-if="product.is_preorder && product.availability_status === 'preorder'"
           class="bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md"
         >
           Ön Sipariş
+        </div>
+      </div>
+    </div>
+
+    <!-- Offline: compact header with initial + SKU + badges -->
+    <div v-else class="relative px-2.5 pt-2.5">
+      <div class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+          <span class="text-sm font-bold text-muted-foreground">{{ product.name.charAt(0) }}</span>
+        </div>
+        <span class="text-[10px] text-muted-foreground font-mono truncate">{{ product.sku }}</span>
+        <div class="flex gap-1 ml-auto">
+          <div v-if="hasDiscount" class="bg-destructive text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
+            -{{ discountPercentage }}%
+          </div>
+          <div v-if="!product.can_purchase" class="bg-red-100 text-red-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-md">
+            Stokta Yok
+          </div>
         </div>
       </div>
     </div>

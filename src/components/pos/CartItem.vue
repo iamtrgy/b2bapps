@@ -6,16 +6,16 @@
       @click="openEditModal"
     >
       <!-- Product Image -->
-      <div class="w-14 h-14 bg-white rounded-lg overflow-hidden flex-shrink-0 border">
+      <div class="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 border" :class="isOnline ? 'bg-white' : 'bg-muted'">
         <img
-          v-if="item.image_url"
+          v-if="item.image_url && isOnline"
           :src="item.image_url"
           :alt="item.name"
           class="w-full h-full object-contain p-1"
           loading="lazy"
         />
         <div v-else class="w-full h-full flex items-center justify-center">
-          <ImageIcon class="h-5 w-5 text-muted-foreground/30" />
+          <span class="text-base font-bold text-muted-foreground">{{ item.name.charAt(0) }}</span>
         </div>
       </div>
 
@@ -80,15 +80,15 @@
       <DialogContent class="sm:max-w-[400px] p-0 gap-0">
         <!-- Header with product info -->
         <div class="flex gap-3 p-4 pr-12 border-b">
-          <div class="w-16 h-16 bg-white rounded-lg overflow-hidden flex-shrink-0 border">
+          <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border" :class="isOnline ? 'bg-white' : 'bg-muted'">
             <img
-              v-if="item.image_url"
+              v-if="item.image_url && isOnline"
               :src="item.image_url"
               :alt="item.name"
               class="w-full h-full object-contain p-1"
             />
             <div v-else class="w-full h-full flex items-center justify-center">
-              <ImageIcon class="h-6 w-6 text-muted-foreground/30" />
+              <span class="text-lg font-bold text-muted-foreground">{{ item.name.charAt(0) }}</span>
             </div>
           </div>
           <div class="flex-1 min-w-0">
@@ -352,7 +352,9 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { ImageIcon, Minus, Plus, Trash2, Clock, Loader2 } from 'lucide-vue-next'
+import { storeToRefs } from 'pinia'
+import { Minus, Plus, Trash2, Clock, Loader2 } from 'lucide-vue-next'
+import { useOfflineStore } from '@/stores/offline'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -381,6 +383,8 @@ interface Props {
   customerId?: number
   stockWarning?: string
 }
+
+const { isOnline } = storeToRefs(useOfflineStore())
 
 const props = defineProps<Props>()
 
