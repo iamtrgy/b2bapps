@@ -7,6 +7,7 @@ import type { Tenant, User, UserPermissions } from '@/types'
 import { useCustomerStore } from './customer'
 import { useProductStore } from './products'
 import { useCartStore } from './cart'
+import { useOfflineStore } from './offline'
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -104,6 +105,8 @@ export const useAuthStore = defineStore('auth', () => {
     const customerStore = useCustomerStore()
     const productStore = useProductStore()
     const cartStore = useCartStore()
+    const offlineStore = useOfflineStore()
+    offlineStore.cleanup()
     customerStore.reset()
     productStore.reset()
     cartStore.clear()
@@ -179,12 +182,19 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // Listen for unauthorized events
-  if (typeof window !== 'undefined') {
+  // Listen for unauthorized events (once flag prevents leaks on HMR)
+  let unauthorizedListenerAttached = false
+  function setupUnauthorizedListener() {
+    if (unauthorizedListenerAttached || typeof window === 'undefined') return
+    unauthorizedListenerAttached = true
+    let logoutPending = false
     window.addEventListener('auth:unauthorized', () => {
-      logout()
+      if (logoutPending) return // deduplicate rapid 401s
+      logoutPending = true
+      logout().finally(() => { logoutPending = false })
     })
   }
+  setupUnauthorizedListener()
 
   return {
     // State

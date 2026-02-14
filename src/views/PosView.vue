@@ -65,7 +65,7 @@
                 type="text"
                 placeholder="Ürün ara..."
                 class="pl-9 pr-10 h-10 text-sm bg-muted border-0"
-                @focus="(e: FocusEvent) => { const el = e.target as HTMLInputElement; el.select(); el.addEventListener('mouseup', (m) => m.preventDefault(), { once: true }) }"
+                @focus="handleSearchFocus"
                 @input="handleSearchInput"
                 @keyup.enter="handleSearch(searchQuery)"
               />
@@ -81,10 +81,10 @@
           </div>
 
           <!-- Category Tabs -->
-          <div class="px-3 pb-3">
+          <div class="px-3 pb-3 relative">
             <div
               class="flex gap-2 overflow-x-auto scrollbar-hide pb-1"
-              @wheel.prevent="(e: WheelEvent) => (e.currentTarget as HTMLElement).scrollLeft += e.deltaY"
+              @wheel.prevent="handleCategoryWheel"
             >
               <!-- Quick Filters -->
               <button
@@ -158,6 +158,7 @@
                 </span>
               </button>
             </div>
+            <div class="absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-card to-transparent pointer-events-none" />
           </div>
         </div>
 
@@ -254,6 +255,7 @@
               <ProductCard
                 v-for="product in productStore.displayProducts"
                 :key="product.id"
+                v-memo="[product.id, product.can_purchase, product.total_discount_percent, product.piece_price, product.box_price, product.availability_status]"
                 :product="product"
                 @add="handleAddToCart"
                 @quick-view="openProductDetail"
@@ -382,7 +384,7 @@
           :is-return-mode="isReturnMode"
           :stock-warnings="stockWarnings"
           @update:notes="cartStore.setNotes"
-          @checkout="handleCheckout"
+          @checkout="showCheckoutConfirm = true"
         />
       </div>
 
@@ -506,7 +508,7 @@
               :is-return-mode="isReturnMode"
               :stock-warnings="stockWarnings"
               @update:notes="cartStore.setNotes"
-              @checkout="handleMobileCheckout"
+              @checkout="showMobileCheckoutConfirm"
             />
           </div>
         </SheetContent>
@@ -693,8 +695,8 @@
         </DialogHeader>
 
         <DialogFooter class="flex-col gap-2 sm:flex-col">
-          <Button v-if="!savedOffline" class="w-full" @click="viewOrder">Siparişi Görüntüle</Button>
-          <Button variant="outline" class="w-full" @click="handleOrderSuccessClose">Alışverişe Devam Et</Button>
+          <Button class="w-full" @click="handleOrderSuccessClose">Alışverişe Devam Et</Button>
+          <Button v-if="!savedOffline" variant="outline" class="w-full" @click="viewOrder">Siparişi Görüntüle</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -716,6 +718,35 @@
         <DialogFooter class="flex-col gap-2 sm:flex-col">
           <Button variant="destructive" class="w-full" @click="confirmClearCart">Sepeti Temizle</Button>
           <Button variant="outline" class="w-full" @click="showClearCartConfirm = false">Vazgeç</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Checkout Confirmation Modal -->
+    <Dialog v-model:open="showCheckoutConfirm">
+      <DialogContent class="max-w-sm text-center">
+        <div class="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4"
+          :class="isReturnMode ? 'bg-red-100' : 'bg-primary/10'"
+        >
+          <ShoppingCart class="h-8 w-8" :class="isReturnMode ? 'text-red-600' : 'text-primary'" />
+        </div>
+
+        <DialogHeader>
+          <DialogTitle>{{ isEditMode ? 'Siparişi Güncelle' : (isReturnMode ? 'İade Onayla' : 'Sipariş Onayla') }}</DialogTitle>
+          <DialogDescription>
+            {{ cartStore.itemCount }} ürün · {{ isReturnMode ? `-${formatPrice(cartStore.total)}` : formatPrice(cartStore.total) }}
+          </DialogDescription>
+        </DialogHeader>
+
+        <DialogFooter class="flex-col gap-2 sm:flex-col">
+          <Button
+            :variant="isReturnMode ? 'destructive' : 'default'"
+            class="w-full"
+            @click="confirmCheckout"
+          >
+            {{ isEditMode ? 'Güncelle' : (isReturnMode ? 'İade Oluştur' : 'Onayla') }}
+          </Button>
+          <Button variant="outline" class="w-full" @click="showCheckoutConfirm = false">Vazgeç</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -889,7 +920,7 @@
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-xs text-muted-foreground mb-1">{{ productDetail?.sku }}</p>
-            <DialogTitle class="text-base leading-snug">{{ productDetail?.name }}</DialogTitle>
+            <DialogTitle class="text-base !leading-snug line-clamp-2">{{ productDetail?.name }}</DialogTitle>
           </div>
         </div>
 
@@ -999,7 +1030,7 @@
     >
       <div
         v-if="showAddedToast"
-        class="fixed left-1/2 -translate-x-1/2 z-50 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 bottom-[calc(1rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]"
+        class="fixed left-1/2 -translate-x-1/2 z-50 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 bottom-[calc(6rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))] md:bottom-[calc(1rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]"
       >
         <CheckCircle class="h-4 w-4" />
         <span class="text-sm font-medium">Sepete eklendi</span>
@@ -1017,7 +1048,7 @@
     >
       <div
         v-if="showUndoToast"
-        class="fixed left-1/2 -translate-x-1/2 z-50 bg-foreground text-background px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-3 bottom-[calc(1rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]"
+        class="fixed left-1/2 -translate-x-1/2 z-50 bg-foreground text-background px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-3 bottom-[calc(6rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))] md:bottom-[calc(1rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]"
       >
         <span class="text-sm">Ürün silindi</span>
         <button
@@ -1041,7 +1072,7 @@
     >
       <div
         v-if="showLowStockWarning"
-        class="fixed left-1/2 -translate-x-1/2 z-50 bg-amber-500 text-white px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 bottom-[calc(1rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]"
+        class="fixed left-1/2 -translate-x-1/2 z-50 bg-amber-500 text-white px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 bottom-[calc(6rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))] md:bottom-[calc(1rem+var(--safe-area-bottom,env(safe-area-inset-bottom,0px)))]"
       >
         <AlertTriangle class="h-4 w-4" />
         <span class="text-sm font-medium">{{ lowStockMessage }}</span>
@@ -1152,6 +1183,7 @@ const lastOrderNumber = ref('')
 // New UX features
 const showMobileCart = ref(false)
 const showClearCartConfirm = ref(false)
+const showCheckoutConfirm = ref(false)
 const showProductDetail = ref(false)
 const productDetail = ref<Product | null>(null)
 const showAddedToast = ref(false)
@@ -1192,17 +1224,33 @@ const isLoadingReturnableOrders = ref(false)
 
 const CUSTOMER_STORAGE_KEY = 'pos_selected_customer'
 
-// Infinite scroll handler
+// Infinite scroll handler (RAF-throttled to avoid layout thrashing)
+let scrollTicking = false
 function handleProductScroll(event: Event) {
-  const target = event.target as HTMLElement
-  const { scrollTop, scrollHeight, clientHeight } = target
+  if (scrollTicking) return
+  scrollTicking = true
+  requestAnimationFrame(() => {
+    const target = event.target as HTMLElement
+    const { scrollTop, scrollHeight, clientHeight } = target
 
-  // Load more when user is 200px from bottom
-  if (scrollHeight - scrollTop - clientHeight < 200) {
-    if (selectedCustomer.value && productStore.hasMore && !productStore.isLoadingMore) {
-      productStore.loadMore(selectedCustomer.value.id)
+    // Load more when user is 200px from bottom
+    if (scrollHeight - scrollTop - clientHeight < 200) {
+      if (selectedCustomer.value && productStore.hasMore && !productStore.isLoadingMore) {
+        productStore.loadMore(selectedCustomer.value.id)
+      }
     }
-  }
+    scrollTicking = false
+  })
+}
+
+function handleSearchFocus(e: FocusEvent) {
+  const el = e.target as HTMLInputElement
+  el.select()
+  el.addEventListener('mouseup', (m) => m.preventDefault(), { once: true })
+}
+
+function handleCategoryWheel(e: WheelEvent) {
+  ;(e.currentTarget as HTMLElement).scrollLeft += e.deltaY
 }
 
 let barcodeBuffer = ''
@@ -1701,8 +1749,13 @@ async function handleCheckout() {
   }
 }
 
-async function handleMobileCheckout() {
+function showMobileCheckoutConfirm() {
   showMobileCart.value = false
+  showCheckoutConfirm.value = true
+}
+
+async function confirmCheckout() {
+  showCheckoutConfirm.value = false
   await handleCheckout()
 }
 

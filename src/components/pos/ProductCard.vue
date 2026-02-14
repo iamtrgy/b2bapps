@@ -20,7 +20,7 @@
       <!-- Quick View Button -->
       <button
         type="button"
-        class="absolute top-2 right-2 p-1.5 bg-black/5 hover:bg-black/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+        class="absolute top-2 right-2 p-1.5 bg-black/5 hover:bg-black/10 rounded-lg opacity-60 group-hover:opacity-100 transition-opacity"
         @click.stop="emit('quickView', product)"
       >
         <Info class="h-4 w-4 text-muted-foreground" />
@@ -29,9 +29,9 @@
       <!-- Out of Stock Overlay -->
       <div
         v-if="!product.can_purchase"
-        class="absolute inset-0 bg-white/70 flex items-center justify-center"
+        class="absolute inset-0 bg-black/40 flex items-center justify-center"
       >
-        <span class="text-xs font-medium text-muted-foreground bg-white px-2 py-1 rounded-md shadow-sm">
+        <span class="text-xs font-semibold text-red-700 bg-white/90 px-2.5 py-1 rounded-md shadow-sm">
           Stokta Yok
         </span>
       </div>

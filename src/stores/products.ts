@@ -5,8 +5,59 @@ import { useOfflineStore } from '@/stores/offline'
 import type { Product } from '@/types'
 
 const PAGE_SIZE = 50
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 export const useProductStore = defineStore('products', () => {
+  // In-memory cache timestamps — tracks when each tab was last fetched
+  const cacheTimestamps: Record<string, { fetchedAt: number; customerId: number; categoryId?: number }> = {}
+
+  function cacheKey(tab: string, categoryId?: number): string {
+    return tab === 'category' && categoryId != null ? `category:${categoryId}` : tab
+  }
+
+  function isCacheFresh(tab: string, customerId: number, categoryId?: number): boolean {
+    const entry = cacheTimestamps[cacheKey(tab, categoryId)]
+    if (!entry) return false
+    if (entry.customerId !== customerId) return false
+    return Date.now() - entry.fetchedAt < CACHE_TTL
+  }
+
+  function markCacheFresh(tab: string, customerId: number, categoryId?: number) {
+    cacheTimestamps[cacheKey(tab, categoryId)] = { fetchedAt: Date.now(), customerId }
+  }
+
+  function invalidateCache(tab?: string) {
+    if (tab) {
+      // Clear all keys starting with tab (handles category:* entries)
+      for (const key in cacheTimestamps) {
+        if (key === tab || key.startsWith(tab + ':')) delete cacheTimestamps[key]
+      }
+      if (tab === 'category') categoryProductsCache.clear()
+    } else {
+      for (const key in cacheTimestamps) delete cacheTimestamps[key]
+      categoryProductsCache.clear()
+    }
+  }
+
+  // Abort controller for cancelling in-flight requests on tab switch
+  let currentAbortController: AbortController | null = null
+
+  function cancelPendingRequest() {
+    if (currentAbortController) {
+      currentAbortController.abort()
+      currentAbortController = null
+    }
+  }
+
+  function newAbortSignal(): AbortSignal {
+    cancelPendingRequest()
+    currentAbortController = new AbortController()
+    return currentAbortController.signal
+  }
+
+  // Per-category product cache (categoryId → products)
+  const categoryProductsCache = new Map<number, { products: Product[]; hasMore: boolean; totalCount: number }>()
+
   // State
   const products = ref<Product[]>([])
   const allProducts = ref<Product[]>([])
@@ -36,29 +87,23 @@ export const useProductStore = defineStore('products', () => {
     })
   }
 
-  // Getters
+  // Getters — sorted copies are cached per-tab by computed; no redundant re-sorts
+  const sortedSearch = computed(() => sortByAvailability(products.value))
+  const sortedAll = computed(() => sortByAvailability(allProducts.value))
+  const sortedCategory = computed(() => sortByAvailability(categoryProducts.value))
+  const sortedBestSellers = computed(() => sortByAvailability(bestSellers.value))
+  const sortedFavorites = computed(() => sortByAvailability(favorites.value))
+  const sortedDiscounted = computed(() => sortByAvailability(discounted.value))
+
   const displayProducts = computed(() => {
-    let items: Product[]
     switch (activeTab.value) {
-      case 'all':
-        items = allProducts.value
-        break
-      case 'category':
-        items = categoryProducts.value
-        break
-      case 'best-sellers':
-        items = bestSellers.value
-        break
-      case 'favorites':
-        items = favorites.value
-        break
-      case 'discounted':
-        items = discounted.value
-        break
-      default:
-        items = products.value
+      case 'all': return sortedAll.value
+      case 'category': return sortedCategory.value
+      case 'best-sellers': return sortedBestSellers.value
+      case 'favorites': return sortedFavorites.value
+      case 'discounted': return sortedDiscounted.value
+      default: return sortedSearch.value
     }
-    return sortByAvailability(items)
   })
 
   const hasProducts = computed(() => displayProducts.value.length > 0)
@@ -129,18 +174,29 @@ export const useProductStore = defineStore('products', () => {
     }
   }
 
-  async function loadBestSellers(customerId: number) {
+  async function loadBestSellers(customerId: number, forceRefresh = false) {
     activeTab.value = 'best-sellers'
+    offset.value = 0
+    hasMore.value = false
+    totalCount.value = 0
+
+    // Use cached data if fresh
+    if (!forceRefresh && isCacheFresh('best-sellers', customerId)) {
+      return
+    }
+
     isLoading.value = true
+    const signal = newAbortSignal()
 
     const offlineStore = useOfflineStore()
 
     try {
       if (offlineStore.isOnline) {
         // Online: fetch from API and cache
-        const response = await productApi.getBestSellers(customerId)
+        const response = await productApi.getBestSellers(customerId, signal)
         bestSellers.value = response.products
         isOfflineMode.value = false
+        markCacheFresh('best-sellers', customerId)
 
         // Cache products for offline use
         offlineStore.cacheProductsForCustomer(response.products, customerId)
@@ -150,7 +206,8 @@ export const useProductStore = defineStore('products', () => {
         bestSellers.value = cachedProducts.slice(0, 20) as unknown as Product[]
         isOfflineMode.value = true
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === 'CanceledError' || signal.aborted) return
       console.error('Failed to load best sellers:', error)
       // Try to use cached data on error
       try {
@@ -169,13 +226,24 @@ export const useProductStore = defineStore('products', () => {
     }
   }
 
-  async function loadFavorites(customerId: number) {
+  async function loadFavorites(customerId: number, forceRefresh = false) {
     activeTab.value = 'favorites'
+    offset.value = 0
+    hasMore.value = false
+    totalCount.value = 0
+
+    if (!forceRefresh && isCacheFresh('favorites', customerId)) {
+      return
+    }
+
     isLoading.value = true
+    const signal = newAbortSignal()
     try {
-      const response = await productApi.getFavorites(customerId)
+      const response = await productApi.getFavorites(customerId, signal)
       favorites.value = response.products
-    } catch (error) {
+      markCacheFresh('favorites', customerId)
+    } catch (error: any) {
+      if (error?.name === 'CanceledError' || signal.aborted) return
       console.error('Failed to load favorites:', error)
       favorites.value = []
     } finally {
@@ -183,13 +251,24 @@ export const useProductStore = defineStore('products', () => {
     }
   }
 
-  async function loadDiscounted(customerId: number) {
+  async function loadDiscounted(customerId: number, forceRefresh = false) {
     activeTab.value = 'discounted'
+    offset.value = 0
+    hasMore.value = false
+    totalCount.value = 0
+
+    if (!forceRefresh && isCacheFresh('discounted', customerId)) {
+      return
+    }
+
     isLoading.value = true
+    const signal = newAbortSignal()
     try {
-      const response = await productApi.getDiscounted(customerId)
+      const response = await productApi.getDiscounted(customerId, signal)
       discounted.value = response.products
-    } catch (error) {
+      markCacheFresh('discounted', customerId)
+    } catch (error: any) {
+      if (error?.name === 'CanceledError' || signal.aborted) return
       console.error('Failed to load discounted products:', error)
       discounted.value = []
     } finally {
@@ -197,22 +276,41 @@ export const useProductStore = defineStore('products', () => {
     }
   }
 
-  async function loadByCategory(customerId: number, categoryId: number) {
+  async function loadByCategory(customerId: number, categoryId: number, forceRefresh = false) {
     activeTab.value = 'category'
     activeCategoryId.value = categoryId
     offset.value = 0
+
+    // Restore from per-category cache if fresh
+    if (!forceRefresh && isCacheFresh('category', customerId, categoryId)) {
+      const cached = categoryProductsCache.get(categoryId)
+      if (cached) {
+        categoryProducts.value = cached.products
+        hasMore.value = cached.hasMore
+        totalCount.value = cached.totalCount
+      }
+      return
+    }
+
     isLoading.value = true
+    const signal = newAbortSignal()
 
     const offlineStore = useOfflineStore()
 
     try {
       if (offlineStore.isOnline) {
         // Online: fetch from API
-        const response = await productApi.getByCategory(customerId, categoryId, PAGE_SIZE, 0)
+        const response = await productApi.getByCategory(customerId, categoryId, PAGE_SIZE, 0, signal)
         categoryProducts.value = response.products
         hasMore.value = response.hasMore ?? false
         totalCount.value = response.total ?? 0
         isOfflineMode.value = false
+        markCacheFresh('category', customerId, categoryId)
+        categoryProductsCache.set(categoryId, {
+          products: response.products,
+          hasMore: hasMore.value,
+          totalCount: totalCount.value,
+        })
 
         // Cache products
         offlineStore.cacheProductsForCustomer(response.products, customerId)
@@ -227,7 +325,8 @@ export const useProductStore = defineStore('products', () => {
         totalCount.value = cachedProducts.length
         isOfflineMode.value = true
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === 'CanceledError' || signal.aborted) return
       console.error('Failed to load category products:', error)
       // Try offline mode on error
       try {
@@ -251,22 +350,29 @@ export const useProductStore = defineStore('products', () => {
   // Store for offline pagination
   const offlineCachedProducts = ref<Product[]>([])
 
-  async function loadAll(customerId: number) {
+  async function loadAll(customerId: number, forceRefresh = false) {
     activeTab.value = 'all'
     offset.value = 0
+
+    if (!forceRefresh && isCacheFresh('all', customerId)) {
+      return
+    }
+
     isLoading.value = true
+    const signal = newAbortSignal()
 
     const offlineStore = useOfflineStore()
 
     try {
       if (offlineStore.isOnline) {
         // Online: fetch from API and cache
-        const response = await productApi.getAll(customerId, PAGE_SIZE, 0)
+        const response = await productApi.getAll(customerId, PAGE_SIZE, 0, signal)
         allProducts.value = response.products
         hasMore.value = response.hasMore ?? false
         totalCount.value = response.total ?? 0
         isOfflineMode.value = false
         offlineCachedProducts.value = [] // Clear offline cache
+        markCacheFresh('all', customerId)
 
         // Cache products for offline use
         offlineStore.cacheProductsForCustomer(response.products, customerId)
@@ -279,7 +385,8 @@ export const useProductStore = defineStore('products', () => {
         totalCount.value = cachedProducts.length
         isOfflineMode.value = true
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === 'CanceledError' || signal.aborted) return
       console.error('Failed to load all products:', error)
       // Try to use cached data on error
       try {
@@ -315,9 +422,9 @@ export const useProductStore = defineStore('products', () => {
       if (isOfflineMode.value && offlineCachedProducts.value.length > 0) {
         const nextBatch = offlineCachedProducts.value.slice(newOffset, newOffset + PAGE_SIZE)
         if (activeTab.value === 'all') {
-          allProducts.value = [...allProducts.value, ...nextBatch]
+          allProducts.value.push(...nextBatch)
         } else if (activeTab.value === 'category') {
-          categoryProducts.value = [...categoryProducts.value, ...nextBatch]
+          categoryProducts.value.push(...nextBatch)
         }
         offset.value = newOffset
         hasMore.value = newOffset + PAGE_SIZE < offlineCachedProducts.value.length
@@ -328,10 +435,10 @@ export const useProductStore = defineStore('products', () => {
       let response
       if (activeTab.value === 'all') {
         response = await productApi.getAll(customerId, PAGE_SIZE, newOffset)
-        allProducts.value = [...allProducts.value, ...response.products]
+        allProducts.value.push(...response.products)
       } else if (activeTab.value === 'category' && activeCategoryId.value) {
         response = await productApi.getByCategory(customerId, activeCategoryId.value, PAGE_SIZE, newOffset)
-        categoryProducts.value = [...categoryProducts.value, ...response.products]
+        categoryProducts.value.push(...response.products)
       } else {
         return // Other tabs don't support pagination
       }
@@ -367,6 +474,9 @@ export const useProductStore = defineStore('products', () => {
     offset.value = 0
     hasMore.value = false
     totalCount.value = 0
+    offlineCachedProducts.value = []
+    categoryProductsCache.clear()
+    invalidateCache()
   }
 
   // Update a product in all arrays (used when availability changes)
@@ -413,5 +523,6 @@ export const useProductStore = defineStore('products', () => {
     clearSearch,
     reset,
     updateProduct,
+    invalidateCache,
   }
 })

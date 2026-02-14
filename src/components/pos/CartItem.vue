@@ -12,6 +12,7 @@
           :src="item.image_url"
           :alt="item.name"
           class="w-full h-full object-contain p-1"
+          loading="lazy"
         />
         <div v-else class="w-full h-full flex items-center justify-center">
           <ImageIcon class="h-5 w-5 text-muted-foreground/30" />
@@ -74,8 +75,8 @@
       </div>
     </button>
 
-    <!-- Edit Modal -->
-    <Dialog :open="showModal" @update:open="showModal = $event">
+    <!-- Edit Modal (lazy-mounted to avoid 20+ hidden dialog portals in cart) -->
+    <Dialog v-if="showModal" :open="showModal" @update:open="showModal = $event">
       <DialogContent class="sm:max-w-[400px] p-0 gap-0">
         <!-- Header with product info -->
         <div class="flex gap-3 p-4 pr-12 border-b">
@@ -324,8 +325,8 @@
       </DialogContent>
     </Dialog>
 
-    <!-- Remove Confirmation Dialog -->
-    <Dialog :open="showRemoveConfirm" @update:open="showRemoveConfirm = $event">
+    <!-- Remove Confirmation Dialog (lazy-mounted) -->
+    <Dialog v-if="showRemoveConfirm" :open="showRemoveConfirm" @update:open="showRemoveConfirm = $event">
       <DialogContent class="sm:max-w-[320px]">
         <div class="text-center">
           <div class="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mb-4">

@@ -24,13 +24,16 @@ const api: AxiosInstance = axios.create({
   },
 })
 
-// Response interceptor for error handling
+// Response interceptor for error handling (debounced 401 to prevent event storms)
+let unauthorizedDispatched = false
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid - will be handled by auth store
+    if (error.response?.status === 401 && !unauthorizedDispatched) {
+      unauthorizedDispatched = true
       window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+      // Reset after short delay so future real 401s are still caught
+      setTimeout(() => { unauthorizedDispatched = false }, 2000)
     }
     return Promise.reject(error)
   }
@@ -147,16 +150,18 @@ export const productApi = {
     return response.data
   },
 
-  getAll: async (customerId: number, limit = 50, offset = 0): Promise<ProductSearchResponse> => {
+  getAll: async (customerId: number, limit = 50, offset = 0, signal?: AbortSignal): Promise<ProductSearchResponse> => {
     const response = await api.get('/products/search', {
       params: { customer_id: customerId, limit, offset },
+      signal,
     })
     return response.data
   },
 
-  getByCategory: async (customerId: number, categoryId: number, limit = 50, offset = 0): Promise<ProductSearchResponse> => {
+  getByCategory: async (customerId: number, categoryId: number, limit = 50, offset = 0, signal?: AbortSignal): Promise<ProductSearchResponse> => {
     const response = await api.get('/products/search', {
       params: { customer_id: customerId, category_id: categoryId, limit, offset },
+      signal,
     })
     return response.data
   },
@@ -168,23 +173,26 @@ export const productApi = {
     return response.data
   },
 
-  getBestSellers: async (customerId: number): Promise<ProductSearchResponse> => {
+  getBestSellers: async (customerId: number, signal?: AbortSignal): Promise<ProductSearchResponse> => {
     const response = await api.get('/products/best-sellers', {
       params: { customer_id: customerId },
+      signal,
     })
     return response.data
   },
 
-  getFavorites: async (customerId: number): Promise<ProductSearchResponse> => {
+  getFavorites: async (customerId: number, signal?: AbortSignal): Promise<ProductSearchResponse> => {
     const response = await api.get('/products/favorites', {
       params: { customer_id: customerId },
+      signal,
     })
     return response.data
   },
 
-  getDiscounted: async (customerId: number): Promise<ProductSearchResponse> => {
+  getDiscounted: async (customerId: number, signal?: AbortSignal): Promise<ProductSearchResponse> => {
     const response = await api.get('/products/discounted', {
       params: { customer_id: customerId },
+      signal,
     })
     return response.data
   },

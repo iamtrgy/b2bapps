@@ -26,7 +26,7 @@
           </span>
         </div>
         <span class="text-[10px] text-muted-foreground">
-          {{ offlineStore.isOnline ? 'Online' : 'Offline' }}
+          {{ offlineStore.isOnline ? 'Çevrimiçi' : 'Çevrimdışı' }}
         </span>
       </button>
 

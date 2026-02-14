@@ -14,76 +14,61 @@ export const useCartStore = defineStore('cart', () => {
   const returnMode = ref(false)
   const returnReferenceOrderId = ref<number | null>(null)
 
-  // Getters
-  const itemCount = computed(() => items.value.length)
-
-  const totalQuantity = computed(() =>
-    items.value.reduce((sum, item) => sum + item.quantity, 0)
-  )
-
-  const boxCount = computed(() =>
-    items.value
-      .filter(item => item.unit_type === 'box')
-      .reduce((sum, item) => sum + item.quantity, 0)
-  )
-
-  const pieceCount = computed(() =>
-    items.value
-      .filter(item => item.unit_type === 'piece')
-      .reduce((sum, item) => sum + item.quantity, 0)
-  )
-
   // For undo feature
   const lastRemovedItem = ref<{ item: CartItem; index: number } | null>(null)
 
-  const subtotal = computed(() =>
-    items.value.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  )
+  // Single-pass aggregation: computes all cart metrics in one iteration
+  const cartAggregates = computed(() => {
+    let totalQty = 0
+    let boxes = 0
+    let pieces = 0
+    let sub = 0
+    let disc = 0
+    let vat = 0
+    const vatMap = new Map<number, number>()
+
+    for (const item of items.value) {
+      const qty = item.quantity
+      totalQty += qty
+      if (item.unit_type === 'box') boxes += qty
+      else pieces += qty
+
+      const lineTotal = item.price * qty
+      sub += lineTotal
+      disc += item.total_discount * qty
+
+      const vatAmount = lineTotal * (item.vat_rate / 100)
+      vat += vatAmount
+      vatMap.set(item.vat_rate, (vatMap.get(item.vat_rate) || 0) + vatAmount)
+    }
+
+    const breakdown: { rate: number; amount: number }[] = []
+    vatMap.forEach((amount, rate) => {
+      if (amount > 0) breakdown.push({ rate, amount })
+    })
+    breakdown.sort((a, b) => a.rate - b.rate)
+
+    return { totalQty, boxes, pieces, sub, disc, vat, breakdown }
+  })
+
+  // Getters — lightweight accessors into the single-pass aggregate
+  const itemCount = computed(() => items.value.length)
+  const totalQuantity = computed(() => cartAggregates.value.totalQty)
+  const boxCount = computed(() => cartAggregates.value.boxes)
+  const pieceCount = computed(() => cartAggregates.value.pieces)
+  const subtotal = computed(() => cartAggregates.value.sub)
 
   const totalDiscount = computed(() => {
-    const itemDiscounts = items.value.reduce((sum, item) => {
-      return sum + item.total_discount * item.quantity
-    }, 0)
-
     const promotionDiscounts = appliedPromotions.value.reduce(
       (sum, promo) => sum + (promo.discount_amount || 0),
       0
     )
-
-    return itemDiscounts + promotionDiscounts
+    return cartAggregates.value.disc + promotionDiscounts
   })
 
-  const vatTotal = computed(() =>
-    items.value.reduce((sum, item) => {
-      const itemTotal = item.price * item.quantity
-      const vatAmount = itemTotal * (item.vat_rate / 100)
-      return sum + vatAmount
-    }, 0)
-  )
-
-  // Group VAT by rate for display
-  const vatBreakdown = computed(() => {
-    const breakdown: { rate: number; amount: number }[] = []
-    const rateMap = new Map<number, number>()
-
-    items.value.forEach(item => {
-      const itemTotal = item.price * item.quantity
-      const vatAmount = itemTotal * (item.vat_rate / 100)
-      const current = rateMap.get(item.vat_rate) || 0
-      rateMap.set(item.vat_rate, current + vatAmount)
-    })
-
-    rateMap.forEach((amount, rate) => {
-      if (amount > 0) {
-        breakdown.push({ rate, amount })
-      }
-    })
-
-    return breakdown.sort((a, b) => a.rate - b.rate)
-  })
-
+  const vatTotal = computed(() => cartAggregates.value.vat)
+  const vatBreakdown = computed(() => cartAggregates.value.breakdown)
   const total = computed(() => subtotal.value + vatTotal.value)
-
   const isEmpty = computed(() => items.value.length === 0)
 
   // Actions
