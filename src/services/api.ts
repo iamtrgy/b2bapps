@@ -142,11 +142,11 @@ export const categoryApi = {
 
 // Product API
 export const productApi = {
-  search: async (query: string, customerId: number, categoryId?: number): Promise<ProductSearchResponse> => {
+  search: async (query: string, customerId: number, categoryId?: number, signal?: AbortSignal): Promise<ProductSearchResponse> => {
     const params: Record<string, any> = { customer_id: customerId }
     if (query) params.q = query
     if (categoryId) params.category_id = categoryId
-    const response = await api.get('/products/search', { params })
+    const response = await api.get('/products/search', { params, signal })
     return response.data
   },
 

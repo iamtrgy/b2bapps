@@ -103,8 +103,10 @@ export const useProductStore = defineStore('products', () => {
     }
   }
 
-  // Abort controller for cancelling in-flight requests on tab switch
+  // Abort controller for cancelling in-flight tab requests (best-sellers, all, category, etc.)
   let currentAbortController: AbortController | null = null
+  // Separate abort controller for search — prevents tab loads from cancelling search
+  let searchAbortController: AbortController | null = null
 
   function cancelPendingRequest() {
     if (currentAbortController) {
@@ -113,10 +115,23 @@ export const useProductStore = defineStore('products', () => {
     }
   }
 
+  function cancelPendingSearch() {
+    if (searchAbortController) {
+      searchAbortController.abort()
+      searchAbortController = null
+    }
+  }
+
   function newAbortSignal(): AbortSignal {
     cancelPendingRequest()
     currentAbortController = new AbortController()
     return currentAbortController.signal
+  }
+
+  function newSearchAbortSignal(): AbortSignal {
+    cancelPendingSearch()
+    searchAbortController = new AbortController()
+    return searchAbortController.signal
   }
 
   // Per-category product cache (categoryId → products)
@@ -209,20 +224,27 @@ export const useProductStore = defineStore('products', () => {
 
   // Actions
   async function searchProducts(query: string, customerId: number) {
+    // Cancel any previous search and tab load to avoid race conditions
+    cancelPendingSearch()
+    cancelPendingRequest()
+
     searchQuery.value = query
     activeTab.value = 'search'
 
     if (!query.trim()) {
       products.value = []
+      isLoading.value = false
       return
     }
 
     isLoading.value = true
+    const signal = newSearchAbortSignal()
     const offlineStore = useOfflineStore()
 
     try {
       if (offlineStore.isOnline) {
-        const response = await productApi.search(query, customerId)
+        const response = await productApi.search(query, customerId, undefined, signal)
+        if (signal.aborted) return
         products.value = response.products
         isOfflineMode.value = false
       } else {
@@ -230,6 +252,7 @@ export const useProductStore = defineStore('products', () => {
         isOfflineMode.value = true
       }
     } catch (error) {
+      if (isCanceledError(error) || signal.aborted) return
       logger.error('Failed to search products:', error)
       try {
         products.value = await filterOfflineProducts(query, customerId)
@@ -238,7 +261,10 @@ export const useProductStore = defineStore('products', () => {
         products.value = []
       }
     } finally {
-      isLoading.value = false
+      // Only clear loading if this search is still the active one (not aborted)
+      if (!signal.aborted) {
+        isLoading.value = false
+      }
     }
   }
 
@@ -303,7 +329,7 @@ export const useProductStore = defineStore('products', () => {
         bestSellers.value = []
       }
     } finally {
-      isLoading.value = false
+      if (!signal.aborted) isLoading.value = false
     }
   }
 
@@ -328,7 +354,7 @@ export const useProductStore = defineStore('products', () => {
       logger.error('Failed to load favorites:', error)
       favorites.value = []
     } finally {
-      isLoading.value = false
+      if (!signal.aborted) isLoading.value = false
     }
   }
 
@@ -353,7 +379,7 @@ export const useProductStore = defineStore('products', () => {
       logger.error('Failed to load discounted products:', error)
       discounted.value = []
     } finally {
-      isLoading.value = false
+      if (!signal.aborted) isLoading.value = false
     }
   }
 
@@ -422,7 +448,7 @@ export const useProductStore = defineStore('products', () => {
         hasMore.value = false
       }
     } finally {
-      isLoading.value = false
+      if (!signal.aborted) isLoading.value = false
     }
   }
 
@@ -479,7 +505,7 @@ export const useProductStore = defineStore('products', () => {
         hasMore.value = false
       }
     } finally {
-      isLoading.value = false
+      if (!signal.aborted) isLoading.value = false
     }
   }
 
