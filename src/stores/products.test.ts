@@ -439,8 +439,9 @@ describe('useProductStore', () => {
       await store.loadAll(1)
 
       expect(store.isOfflineMode).toBe(true)
-      expect(store.allProducts.length).toBe(60) // all products shown at once offline
-      expect(store.hasMore).toBe(false)
+      expect(store.allProducts.length).toBe(50) // first page of offline products
+      expect(store.hasMore).toBe(true)
+      expect(store.totalCount).toBe(60)
     })
 
     it('falls back to offline cache when API errors', async () => {
@@ -452,8 +453,8 @@ describe('useProductStore', () => {
       await store.loadAll(1)
 
       expect(store.isOfflineMode).toBe(true)
-      expect(store.allProducts.length).toBe(60)
-      expect(store.hasMore).toBe(false)
+      expect(store.allProducts.length).toBe(50)
+      expect(store.hasMore).toBe(true)
       expect(store.totalCount).toBe(60)
       expect(store.isLoading).toBe(false)
     })
@@ -565,26 +566,38 @@ describe('useProductStore', () => {
       expect(store.isLoadingMore).toBe(false)
     })
 
-    it('shows all offline cached products at once for all tab (no pagination)', async () => {
+    it('paginates offline cached products for all tab', async () => {
       mockOnlineState = false
       const cached = Array.from({ length: 80 }, (_, i) => ({ id: i, name: `P${i}`, sku: `S${i}`, customer_id: 0, barcode: null, barcode_box: null, image_url: null, base_price: 5, box_price: 5, piece_price: 5, broken_case_piece_price: 5, total_discount: 0, total_discount_percent: 0, pieces_per_box: 1, allow_broken_case: false, vat_rate: null, category_id: null, availability_status: 'in_stock', can_purchase: true, allow_backorder: false, is_preorder: false, cached_at: Date.now() }))
       mockGetOfflineProducts.mockResolvedValue(cached)
 
       await store.loadAll(1)
+      expect(store.allProducts.length).toBe(50) // first page
+      expect(store.hasMore).toBe(true)
+      expect(store.isOfflineMode).toBe(true)
+      expect(store.totalCount).toBe(80)
+
+      // Load more should add remaining products
+      await store.loadMore(1)
       expect(store.allProducts.length).toBe(80)
       expect(store.hasMore).toBe(false)
-      expect(store.isOfflineMode).toBe(true)
     })
 
-    it('shows all offline cached products at once for category tab (no pagination)', async () => {
+    it('paginates offline cached products for category tab', async () => {
       mockOnlineState = false
       const cached = Array.from({ length: 80 }, (_, i) => ({ id: i, name: `P${i}`, sku: `S${i}`, customer_id: 0, barcode: null, barcode_box: null, image_url: null, base_price: 5, box_price: 5, piece_price: 5, broken_case_piece_price: 5, total_discount: 0, total_discount_percent: 0, pieces_per_box: 1, allow_broken_case: false, vat_rate: null, category_id: 5, availability_status: 'in_stock', can_purchase: true, allow_backorder: false, is_preorder: false, cached_at: Date.now() }))
       mockGetOfflineProducts.mockResolvedValue(cached)
 
       await store.loadByCategory(1, 5)
+      expect(store.categoryProducts.length).toBe(50) // first page
+      expect(store.hasMore).toBe(true)
+      expect(store.isOfflineMode).toBe(true)
+      expect(store.totalCount).toBe(80)
+
+      // Load more should add remaining products
+      await store.loadMore(1)
       expect(store.categoryProducts.length).toBe(80)
       expect(store.hasMore).toBe(false)
-      expect(store.isOfflineMode).toBe(true)
     })
   })
 
