@@ -223,7 +223,9 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { orderApi } from '@/services/api'
-import type { Order } from '@/types'
+import type { Order, OrderItem } from '@/types'
+import { logger } from '@/utils/logger'
+import { getErrorMessage } from '@/utils/error'
 
 const route = useRoute()
 const router = useRouter()
@@ -248,7 +250,7 @@ async function fetchOrder() {
   try {
     order.value = await orderApi.get(id)
   } catch (error) {
-    console.error('Failed to fetch order:', error)
+    logger.error('Failed to fetch order:', error)
     order.value = null
   } finally {
     isLoading.value = false
@@ -270,11 +272,11 @@ async function handleSyncToAfas() {
     } else {
       syncMessage.value = { type: 'error', text: result.message || 'Failed to sync order' }
     }
-  } catch (error: any) {
-    console.error('Failed to sync order:', error)
+  } catch (error: unknown) {
+    logger.error('Failed to sync order:', error)
     syncMessage.value = {
       type: 'error',
-      text: error.response?.data?.message || error.message || 'Failed to sync order to AFAS'
+      text: getErrorMessage(error, 'Failed to sync order to AFAS')
     }
   } finally {
     isSyncing.value = false
@@ -300,7 +302,7 @@ function formatPrice(price: number): string {
   }).format(price)
 }
 
-function getPiecesPerBox(item: any): number {
+function getPiecesPerBox(item: OrderItem): number {
   return item.pieces_per_box || item.product?.pieces_per_box || 1
 }
 

@@ -230,6 +230,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useOfflineStore } from '@/stores/offline'
+import { logger } from '@/utils/logger'
 import { useCustomerStore } from '@/stores/customer'
 import { deleteDatabase, type PendingOrder } from '@/services/db'
 
@@ -259,7 +260,7 @@ async function loadPendingOrders() {
   try {
     pendingOrders.value = await offlineStore.getAllPendingOrders()
   } catch (error) {
-    console.error('Failed to load pending orders:', error)
+    logger.error('Failed to load pending orders:', error)
   } finally {
     isLoading.value = false
   }
@@ -315,7 +316,7 @@ async function handleResetCache() {
       // Reload to reinitialize with new schema
       window.location.reload()
     } catch (error) {
-      console.error('Failed to reset cache:', error)
+      logger.error('Failed to reset cache:', error)
       // Try reload anyway
       window.location.reload()
     }

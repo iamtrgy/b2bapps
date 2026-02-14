@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { categoryApi } from '@/services/api'
 import type { Category } from '@/types'
+import { logger } from '@/utils/logger'
 
 export const useCategoryStore = defineStore('category', () => {
   // State
@@ -25,7 +26,7 @@ export const useCategoryStore = defineStore('category', () => {
       const response = await categoryApi.list(true) // parents only
       categories.value = response.categories || []
     } catch (error) {
-      console.error('Failed to fetch categories:', error)
+      logger.error('Failed to fetch categories:', error)
       categories.value = []
     } finally {
       isLoading.value = false

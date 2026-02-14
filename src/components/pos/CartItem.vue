@@ -359,6 +359,7 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { productApi } from '@/services/api'
 import type { CartItem } from '@/types'
+import { logger } from '@/utils/logger'
 
 interface PurchaseHistoryItem {
   order_number: string
@@ -506,7 +507,7 @@ async function openEditModal() {
       const response = await productApi.getPurchaseHistory(props.customerId, props.item.product_id)
       purchaseHistory.value = response.history || []
     } catch (error) {
-      console.error('Failed to fetch purchase history:', error)
+      logger.error('Failed to fetch purchase history:', error)
     } finally {
       isLoadingHistory.value = false
     }

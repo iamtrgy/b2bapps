@@ -369,6 +369,7 @@ import {
   ClipboardPaste
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
+import { logger } from '@/utils/logger'
 import { authApi } from '@/services/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -509,12 +510,12 @@ async function handleSubmit() {
     showSuccess.value = true
     // Navigate after brief delay
     setTimeout(async () => {
-      console.log('[Login] Attempting navigation to /pos, isAuthenticated:', authStore.isAuthenticated)
+      logger.info('[Login] Attempting navigation to /pos, isAuthenticated:', authStore.isAuthenticated)
       try {
         await router.push('/pos')
-        console.log('[Login] Navigation successful')
+        logger.info('[Login] Navigation successful')
       } catch (navError) {
-        console.error('[Login] Navigation failed:', navError)
+        logger.error('[Login] Navigation failed:', navError)
         // Force navigation if push fails
         router.replace('/pos')
       }
@@ -596,7 +597,7 @@ async function pasteToken() {
     }
   } catch {
     // Clipboard access denied or not supported
-    console.log('Clipboard access not available')
+    logger.info('Clipboard access not available')
   }
 }
 

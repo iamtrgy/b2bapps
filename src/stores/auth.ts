@@ -4,6 +4,8 @@ import { load } from '@tauri-apps/plugin-store'
 import { platform, arch } from '@tauri-apps/plugin-os'
 import api, { authApi } from '@/services/api'
 import type { Tenant, User, UserPermissions } from '@/types'
+import { logger } from '@/utils/logger'
+import { getErrorMessage } from '@/utils/error'
 import { useCustomerStore } from './customer'
 import { useProductStore } from './products'
 import { useCartStore } from './cart'
@@ -41,8 +43,8 @@ export const useAuthStore = defineStore('auth', () => {
         return true
       }
       throw new Error(response.message || 'Tenant verification failed')
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || error.message || 'Tenant verification failed')
+    } catch (error: unknown) {
+      throw new Error(getErrorMessage(error, 'Tenant verification failed'))
     }
   }
 
@@ -51,34 +53,30 @@ export const useAuthStore = defineStore('auth', () => {
       const deviceName = await getDeviceName()
       const response = await authApi.login(email, password, deviceName)
 
-      console.log('[Auth] Login response:', response)
-
       if (response.success && response.token && response.user) {
         token.value = response.token
         user.value = response.user
         permissions.value = response.permissions || null
-
-        console.log('[Auth] Token set:', !!token.value, 'User set:', !!user.value)
 
         // Set auth header for all future requests
         api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
 
         // Store credentials securely (non-blocking - don't wait for it)
         saveCredentials().catch((err) => {
-          console.error('Failed to save credentials:', err)
+          logger.error('Failed to save credentials:', err)
         })
 
         return true
       }
-      console.error('[Auth] Login response missing required fields:', {
+      logger.error('[Auth] Login response missing required fields:', {
         success: response.success,
         hasToken: !!response.token,
         hasUser: !!response.user
       })
       throw new Error(response.message || 'Login failed')
-    } catch (error: any) {
-      console.error('[Auth] Login error:', error)
-      throw new Error(error.response?.data?.message || error.message || 'Login failed')
+    } catch (error: unknown) {
+      logger.error('[Auth] Login error:', error)
+      throw new Error(getErrorMessage(error, 'Login failed'))
     }
   }
 
@@ -158,7 +156,7 @@ export const useAuthStore = defineStore('auth', () => {
       await store.set('api_base_url', tenant.value?.api_base_url)
       await store.save()
     } catch (error) {
-      console.error('Failed to save credentials:', error)
+      logger.error('Failed to save credentials:', error)
     }
   }
 
@@ -168,7 +166,7 @@ export const useAuthStore = defineStore('auth', () => {
       await store.clear()
       await store.save()
     } catch (error) {
-      console.error('Failed to clear credentials:', error)
+      logger.error('Failed to clear credentials:', error)
     }
   }
 

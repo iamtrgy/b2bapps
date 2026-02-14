@@ -3,6 +3,8 @@
  * Handles local storage of products, customers, categories, and pending orders
  */
 
+import { logger } from '@/utils/logger'
+
 const DB_NAME = 'pos_offline_db'
 const DB_VERSION = 2
 
@@ -36,18 +38,18 @@ export async function deleteDatabase(): Promise<void> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.deleteDatabase(DB_NAME)
     request.onsuccess = () => {
-      console.log('Database deleted successfully')
+      logger.info('Database deleted successfully')
       resolve()
     }
     request.onerror = () => {
-      console.error('Failed to delete database:', request.error)
+      logger.error('Failed to delete database:', request.error)
       reject(request.error)
     }
     request.onblocked = () => {
-      console.warn('Database deletion blocked - closing connections')
+      logger.warn('Database deletion blocked - closing connections')
       // Force resolve after a short delay even if blocked
       setTimeout(() => {
-        console.log('Proceeding with reload despite blocked deletion')
+        logger.info('Proceeding with reload despite blocked deletion')
         resolve()
       }, 500)
     }
@@ -64,12 +66,12 @@ export async function initDB(): Promise<IDBDatabase> {
     const request = indexedDB.open(DB_NAME, DB_VERSION)
 
     request.onerror = () => {
-      console.error('Failed to open IndexedDB:', request.error)
+      logger.error('Failed to open IndexedDB:', request.error)
       reject(request.error)
     }
 
     request.onblocked = () => {
-      console.warn('IndexedDB upgrade blocked. Please close other tabs using this app.')
+      logger.warn('IndexedDB upgrade blocked. Please close other tabs using this app.')
     }
 
     request.onsuccess = () => {
@@ -79,14 +81,14 @@ export async function initDB(): Promise<IDBDatabase> {
       db.onversionchange = () => {
         db?.close()
         db = null
-        console.log('Database version changed, connection closed')
+        logger.info('Database version changed, connection closed')
       }
 
       resolve(db)
     }
 
     request.onupgradeneeded = (event) => {
-      console.log('Upgrading IndexedDB from version', event.oldVersion, 'to', event.newVersion)
+      logger.info('Upgrading IndexedDB from version', event.oldVersion, 'to', event.newVersion)
       const database = (event.target as IDBOpenDBRequest).result
 
       // Products store - indexed by id and customer_id

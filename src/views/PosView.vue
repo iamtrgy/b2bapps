@@ -270,7 +270,7 @@
               <Button
                 variant="outline"
                 size="sm"
-                @click="productStore.loadMore(selectedCustomer!.id)"
+                @click="productStore.loadMore(selectedCustomer.id)"
               >
                 <ChevronDown class="h-4 w-4 mr-1" />
                 Daha Fazla Yükle
@@ -1138,6 +1138,8 @@ import { useCategoryStore } from '@/stores/category'
 import { useOfflineStore } from '@/stores/offline'
 import { orderApi, customerApi, productApi } from '@/services/api'
 import type { Customer, Product, ReturnableOrder } from '@/types'
+import { logger } from '@/utils/logger'
+import { getErrorMessage } from '@/utils/error'
 
 const router = useRouter()
 const route = useRoute()
@@ -1354,7 +1356,7 @@ async function openCustomerDetail() {
     const fullData = await customerApi.get(selectedCustomer.value.id)
     customerDetail.value = fullData
   } catch (error) {
-    console.error('Failed to fetch customer detail:', error)
+    logger.error('Failed to fetch customer detail:', error)
   }
 }
 
@@ -1461,7 +1463,7 @@ async function handleSetAvailability(type: 'backorder' | 'preorder') {
 
   try {
     const result = await productApi.updateAvailability(outOfStockProduct.value.id, type)
-    console.log('Availability update result:', result)
+    logger.info('Availability update result:', result)
 
     if (result.success) {
       // Update the product with new availability - it can now be purchased
@@ -1481,7 +1483,7 @@ async function handleSetAvailability(type: 'backorder' | 'preorder') {
       showOutOfStockModal.value = false
       addProductToCart(updatedProduct)
     } else {
-      console.error('API returned success: false', result)
+      logger.error('API returned success: false', result)
       // Show error toast
       lowStockMessage.value = result.message || 'Güncelleme başarısız oldu'
       showLowStockWarning.value = true
@@ -1490,10 +1492,10 @@ async function handleSetAvailability(type: 'backorder' | 'preorder') {
         showLowStockWarning.value = false
       }, 3000)
     }
-  } catch (error: any) {
-    console.error('Failed to update availability:', error)
+  } catch (error: unknown) {
+    logger.error('Failed to update availability:', error)
     // Show error toast
-    lowStockMessage.value = error.response?.data?.message || 'Bir hata oluştu'
+    lowStockMessage.value = getErrorMessage(error, 'Bir hata oluştu')
     showLowStockWarning.value = true
     if (lowStockTimeout) clearTimeout(lowStockTimeout)
     lowStockTimeout = setTimeout(() => {
@@ -1516,7 +1518,7 @@ async function openProductDetail(product: Product) {
       const response = await productApi.getPurchaseHistory(selectedCustomer.value.id, product.id)
       productDetailHistory.value = response.history || []
     } catch (error) {
-      console.error('Failed to fetch purchase history:', error)
+      logger.error('Failed to fetch purchase history:', error)
     } finally {
       isLoadingProductHistory.value = false
     }
@@ -1543,7 +1545,7 @@ function handleRemoveItem(index: number) {
 }
 
 function handleUpdateQuantity(index: number, newQty: number, customPrice?: number, boxPrice?: number, piecePrice?: number) {
-  cartStore.updateQuantity(index, newQty, customPrice, boxPrice, piecePrice)
+  cartStore.updateQuantity(index, newQty, { custom: customPrice, box: boxPrice, piece: piecePrice })
 }
 
 function handleUndoRemove() {
@@ -1569,7 +1571,7 @@ async function handleBarcodeScan(barcode: string) {
     const quantity = product.moq_quantity || 1
     cartStore.addItem(product, quantity, unitType)
   } else {
-    console.error('Product not found for barcode:', barcode)
+    logger.error('Product not found for barcode:', barcode)
     lowStockMessage.value = 'Ürün bulunamadı'
     showLowStockWarning.value = true
     if (lowStockTimeout) clearTimeout(lowStockTimeout)
@@ -1695,12 +1697,12 @@ async function handleCheckout() {
       showOrderSuccess.value = true
       cartStore.clear()
     }
-  } catch (error: any) {
-    console.error('Failed to create order:', error)
+  } catch (error: unknown) {
+    logger.error('Failed to create order:', error)
 
     // In edit mode, show error to user (no offline fallback)
     if (isEditMode.value) {
-      const msg = error.response?.data?.message || 'Sipariş güncellenirken bir hata oluştu'
+      const msg = getErrorMessage(error, 'Sipariş güncellenirken bir hata oluştu')
       lowStockMessage.value = msg
       showLowStockWarning.value = true
       if (lowStockTimeout) clearTimeout(lowStockTimeout)
@@ -1737,7 +1739,7 @@ async function handleCheckout() {
         showOrderSuccess.value = true
         cartStore.clear()
       } catch (offlineError) {
-        console.error('Failed to save order offline:', offlineError)
+        logger.error('Failed to save order offline:', offlineError)
         lowStockMessage.value = 'Sipariş kaydedilemedi. Lütfen tekrar deneyin.'
         showLowStockWarning.value = true
         if (lowStockTimeout) clearTimeout(lowStockTimeout)
@@ -1776,10 +1778,10 @@ async function handleReturnToggle() {
 
   try {
     const response = await customerApi.getReturnableOrders(selectedCustomer.value.id)
-    console.log('Returnable orders API response:', JSON.stringify(response, null, 2))
+    logger.info('Returnable orders API response:', JSON.stringify(response, null, 2))
     returnableOrders.value = response.data || []
   } catch (error) {
-    console.error('Failed to fetch returnable orders:', error)
+    logger.error('Failed to fetch returnable orders:', error)
   } finally {
     isLoadingReturnableOrders.value = false
   }
@@ -1832,7 +1834,7 @@ onMounted(async () => {
         activeCategoryTab.value = 'best-sellers'
       }
     } catch (error) {
-      console.error('Failed to load order for editing:', error)
+      logger.error('Failed to load order for editing:', error)
     }
   } else {
     const storedCustomer = loadCustomerFromStorage()

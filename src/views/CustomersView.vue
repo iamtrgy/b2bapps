@@ -166,6 +166,7 @@ import { CustomerListItem, CustomerDetailSheet, OrderDetailSheet } from '@/compo
 import { useCustomerCache } from '@/composables/useCustomerCache'
 import { useAuthStore } from '@/stores/auth'
 import { customerApi, orderApi } from '@/services/api'
+import { logger } from '@/utils/logger'
 import {
   UI_TEXT,
   ITEM_HEIGHT,
@@ -265,7 +266,7 @@ async function fetchCustomers(page = 1, search?: string): Promise<void> {
     lastPage.value = response.meta.last_page
     hasMore.value = currentPage.value < lastPage.value
   } catch (err) {
-    console.error('Failed to fetch customers:', err)
+    logger.error('Failed to fetch customers:', err)
     if (lastSearchTerm.value === search) {
       error.value = UI_TEXT.errorLoading
     }
@@ -292,7 +293,7 @@ async function fetchCustomerOrders(customerId: number, page = 1): Promise<void> 
     ordersLastPage.value = response.meta.last_page
     hasMoreOrders.value = ordersPage.value < ordersLastPage.value
   } catch (err) {
-    console.error('Failed to fetch customer orders:', err)
+    logger.error('Failed to fetch customer orders:', err)
     // Fallback to recent_orders from customer data
     if (page === 1 && customerDetail.value?.recent_orders) {
       customerOrders.value = customerDetail.value.recent_orders
@@ -349,7 +350,7 @@ async function handleCustomerClick(customer: Customer): Promise<void> {
     customerDetail.value = fullData
     setCachedCustomer(customer.id, fullData)
   } catch (err) {
-    console.error('Failed to fetch customer detail:', err)
+    logger.error('Failed to fetch customer detail:', err)
   }
 }
 
@@ -367,7 +368,7 @@ async function handleViewOrder(orderId: number): Promise<void> {
   try {
     orderDetail.value = await orderApi.get(orderId)
   } catch (err) {
-    console.error('Failed to fetch order:', err)
+    logger.error('Failed to fetch order:', err)
   } finally {
     isLoadingOrderDetail.value = false
   }

@@ -27,6 +27,9 @@ import {
   type PendingOrder,
 } from '@/services/db'
 import { orderApi, productApi, customerApi } from '@/services/api'
+import { logger } from '@/utils/logger'
+import { getErrorMessage } from '@/utils/error'
+import type { Product } from '@/types'
 
 // Network check interval (30 seconds)
 const NETWORK_CHECK_INTERVAL = 30000
@@ -67,7 +70,7 @@ export const useOfflineStore = defineStore('offline', () => {
 
       // Check if database schema is outdated (missing 'orders' store)
       if (!database.objectStoreNames.contains('orders')) {
-        console.warn('Database schema outdated. Resetting...')
+        logger.warn('Database schema outdated. Resetting...')
         localStorage.removeItem('lastProductSync')
         localStorage.removeItem('lastCustomerSync')
         localStorage.removeItem('lastOrderSync')
@@ -86,7 +89,7 @@ export const useOfflineStore = defineStore('offline', () => {
 
         // If we just came online, sync pending orders
         if (!wasOnline && isOnline.value) {
-          console.log('Internet connection restored.')
+          logger.info('Internet connection restored.')
           if (pendingOrderCount.value > 0) {
             syncPendingOrders()
           }
@@ -115,7 +118,7 @@ export const useOfflineStore = defineStore('offline', () => {
         syncPendingOrders()
       }
     } catch (error) {
-      console.error('Failed to initialize offline store:', error)
+      logger.error('Failed to initialize offline store:', error)
     }
   }
 
@@ -125,7 +128,7 @@ export const useOfflineStore = defineStore('offline', () => {
     const actuallyOnline = await checkNetworkStatus()
     if (actuallyOnline) {
       isOnline.value = true
-      console.log('Network: Online')
+      logger.info('Network: Online')
 
       // Automatically sync pending orders when coming online
       if (pendingOrderCount.value > 0) {
@@ -140,18 +143,20 @@ export const useOfflineStore = defineStore('offline', () => {
     const actuallyOnline = await checkNetworkStatus()
     if (!actuallyOnline) {
       isOnline.value = false
-      console.log('Network: Offline')
+      logger.info('Network: Offline')
     }
   }
 
   // Cache products for a customer
-  async function cacheProductsForCustomer(products: any[], customerId: number) {
+  async function cacheProductsForCustomer(products: Product[], customerId: number) {
     try {
       const cachedProducts: CachedProduct[] = products.map(p => ({
         id: p.id,
         customer_id: customerId,
         name: p.name,
         sku: p.sku,
+        barcode: p.barcode,
+        barcode_box: p.barcode_box,
         image_url: p.image_url,
         base_price: p.base_price,
         box_price: p.box_price,
@@ -162,17 +167,17 @@ export const useOfflineStore = defineStore('offline', () => {
         pieces_per_box: p.pieces_per_box,
         allow_broken_case: p.allow_broken_case,
         vat_rate: p.vat_rate,
-        category_id: p.category_id,
+        category_id: p.category_id ?? null,
         availability_status: p.availability_status,
         can_purchase: p.can_purchase,
-        allow_backorder: p.allow_backorder,
-        is_preorder: p.is_preorder,
+        allow_backorder: p.allow_backorder ?? false,
+        is_preorder: p.is_preorder ?? false,
         cached_at: Date.now(),
       }))
 
       await cacheProducts(cachedProducts, customerId)
     } catch (error) {
-      console.error('Failed to cache products:', error)
+      logger.error('Failed to cache products:', error)
     }
   }
 
@@ -219,7 +224,7 @@ export const useOfflineStore = defineStore('offline', () => {
 
       return { success: true, count: allProducts.length }
     } catch (error) {
-      console.error('Failed to download products:', error)
+      logger.error('Failed to download products:', error)
       return { success: false, count: 0 }
     } finally {
       isDownloading.value = false
@@ -257,7 +262,7 @@ export const useOfflineStore = defineStore('offline', () => {
       while (hasMore) {
         const response = await customerApi.list(page)
         if (!response?.data || !response?.meta) {
-          console.error('Invalid customer API response')
+          logger.error('Invalid customer API response')
           break
         }
         allCustomers.push(...response.data)
@@ -278,7 +283,7 @@ export const useOfflineStore = defineStore('offline', () => {
 
       return { success: true, count: allCustomers.length }
     } catch (error) {
-      console.error('Failed to download customers:', error)
+      logger.error('Failed to download customers:', error)
       return { success: false, count: 0 }
     } finally {
       isDownloading.value = false
@@ -306,7 +311,7 @@ export const useOfflineStore = defineStore('offline', () => {
     // Check if orders store exists before downloading
     const database = await initDB()
     if (!database.objectStoreNames.contains('orders')) {
-      console.error('Orders store not found. Database needs to be reset.')
+      logger.error('Orders store not found. Database needs to be reset.')
       return { success: false, count: 0, needsReset: true }
     }
 
@@ -323,7 +328,7 @@ export const useOfflineStore = defineStore('offline', () => {
       while (page <= MAX_PAGES) {
         const response = await orderApi.list(page)
         if (!response?.data || !response?.meta) {
-          console.error('Invalid order API response')
+          logger.error('Invalid order API response')
           break
         }
         allOrders.push(...response.data)
@@ -344,7 +349,7 @@ export const useOfflineStore = defineStore('offline', () => {
 
       return { success: true, count: allOrders.length }
     } catch (error) {
-      console.error('Failed to download orders:', error)
+      logger.error('Failed to download orders:', error)
       return { success: false, count: 0 }
     } finally {
       isDownloading.value = false
@@ -358,7 +363,7 @@ export const useOfflineStore = defineStore('offline', () => {
 
     // Check if store exists
     if (!database.objectStoreNames.contains('orders')) {
-      console.error('Orders store not found. Please clear browser data and reload.')
+      logger.error('Orders store not found. Please clear browser data and reload.')
       return
     }
 
@@ -401,7 +406,7 @@ export const useOfflineStore = defineStore('offline', () => {
         request.onerror = () => reject(request.error)
       })
     } catch (error) {
-      console.error('Failed to get cached orders:', error)
+      logger.error('Failed to get cached orders:', error)
       return []
     }
   }
@@ -438,7 +443,7 @@ export const useOfflineStore = defineStore('offline', () => {
     try {
       return await getCachedProducts(customerId)
     } catch (error) {
-      console.error('Failed to get cached products:', error)
+      logger.error('Failed to get cached products:', error)
       return []
     }
   }
@@ -458,7 +463,7 @@ export const useOfflineStore = defineStore('offline', () => {
 
       await cacheCustomers(cachedCustomers)
     } catch (error) {
-      console.error('Failed to cache customers:', error)
+      logger.error('Failed to cache customers:', error)
     }
   }
 
@@ -467,7 +472,7 @@ export const useOfflineStore = defineStore('offline', () => {
     try {
       return await getCachedCustomers()
     } catch (error) {
-      console.error('Failed to get cached customers:', error)
+      logger.error('Failed to get cached customers:', error)
       return []
     }
   }
@@ -486,7 +491,7 @@ export const useOfflineStore = defineStore('offline', () => {
 
       await cacheCategories(cachedCategories)
     } catch (error) {
-      console.error('Failed to cache categories:', error)
+      logger.error('Failed to cache categories:', error)
     }
   }
 
@@ -495,7 +500,7 @@ export const useOfflineStore = defineStore('offline', () => {
     try {
       return await getCachedCategories()
     } catch (error) {
-      console.error('Failed to get cached categories:', error)
+      logger.error('Failed to get cached categories:', error)
       return []
     }
   }
@@ -589,15 +594,15 @@ export const useOfflineStore = defineStore('offline', () => {
           } else {
             throw new Error(result.message || 'Failed to create order')
           }
-        } catch (error: any) {
-          console.error('Failed to sync order:', order.local_id, error)
+        } catch (error: unknown) {
+          logger.error('Failed to sync order:', order.local_id, error)
           failedCount++
 
           // Mark as failed with error message
           await updatePendingOrder({
             ...order,
             sync_status: 'failed',
-            sync_error: error.message || 'Unknown error',
+            sync_error: getErrorMessage(error, 'Unknown error'),
             retry_count: order.retry_count + 1,
           })
         }
@@ -609,9 +614,9 @@ export const useOfflineStore = defineStore('offline', () => {
       if (failedCount > 0) {
         syncError.value = `${failedCount} sipariş gönderilemedi`
       }
-    } catch (error: any) {
-      console.error('Sync failed:', error)
-      syncError.value = error.message || 'Senkronizasyon başarısız'
+    } catch (error: unknown) {
+      logger.error('Sync failed:', error)
+      syncError.value = getErrorMessage(error, 'Senkronizasyon başarısız')
     } finally {
       isSyncing.value = false
     }

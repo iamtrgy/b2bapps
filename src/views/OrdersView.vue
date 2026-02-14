@@ -283,14 +283,14 @@
                   </span>
                 </div>
                 <!-- Piece price for boxes -->
-                <p v-if="item.unit_type === 'box' && (item.pieces_per_box || item.product?.pieces_per_box) > 1" class="text-xs text-muted-foreground mt-0.5">
-                  {{ formatPrice(item.unit_price / (item.pieces_per_box || item.product?.pieces_per_box)) }}/adet
+                <p v-if="item.unit_type === 'box' && (item.pieces_per_box ?? item.product?.pieces_per_box ?? 1) > 1" class="text-xs text-muted-foreground mt-0.5">
+                  {{ formatPrice(item.unit_price / (item.pieces_per_box ?? item.product?.pieces_per_box ?? 1)) }}/adet
                 </p>
                 <div class="flex items-center justify-between mt-1">
                   <span class="text-xs text-muted-foreground">
                     {{ item.quantity_ordered }} {{ item.unit_type === 'box' ? 'koli' : 'adet' }}
-                    <template v-if="item.unit_type === 'box' && (item.pieces_per_box || item.product?.pieces_per_box) > 1">
-                      ({{ item.quantity_ordered * (item.pieces_per_box || item.product?.pieces_per_box) }} adet)
+                    <template v-if="item.unit_type === 'box' && (item.pieces_per_box ?? item.product?.pieces_per_box ?? 1) > 1">
+                      ({{ item.quantity_ordered * (item.pieces_per_box ?? item.product?.pieces_per_box ?? 1) }} adet)
                     </template>
                   </span>
                   <span class="text-sm font-bold text-foreground">{{ formatPrice(item.line_total) }}</span>
@@ -420,11 +420,11 @@
             <tbody>
               <tr v-for="item in orderDetailItems" :key="item.id">
                 <td style="padding: 10px 8px; border-bottom: 1px solid #eee; vertical-align: top;">
-                  <div style="font-weight: 500;">{{ item.product?.name || item.name || 'Ürün' }}</div>
-                  <div v-if="item.original_price && item.original_price > (item.unit_price || item.price)" style="font-size: 12px; margin-top: 2px;">
+                  <div style="font-weight: 500;">{{ item.product?.name || 'Ürün' }}</div>
+                  <div v-if="item.original_price && item.original_price > item.unit_price" style="font-size: 12px; margin-top: 2px;">
                     <span style="text-decoration: line-through; color: #999;">{{ formatPrice(item.original_price) }}</span>
                     <span style="background: #dc2626; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; margin-left: 5px;">
-                      -{{ Math.round(((item.original_price - (item.unit_price || item.price)) / item.original_price) * 100) }}%
+                      -{{ Math.round(((item.original_price - item.unit_price) / item.original_price) * 100) }}%
                     </span>
                   </div>
                 </td>
@@ -432,13 +432,13 @@
                   {{ (item.unit_type || 'box') === 'box' ? 'Koli' : 'Adet' }}
                 </td>
                 <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: center; font-weight: 500;">
-                  {{ item.quantity_ordered || item.quantity }}
+                  {{ item.quantity_ordered }}
                 </td>
                 <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: right;">
-                  {{ formatPrice(item.unit_price || item.price) }}
+                  {{ formatPrice(item.unit_price) }}
                 </td>
                 <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold;">
-                  {{ formatPrice(item.line_total || (item.quantity_ordered || item.quantity) * (item.unit_price || item.price)) }}
+                  {{ formatPrice(item.line_total || (item.quantity_ordered * item.unit_price)) }}
                 </td>
               </tr>
             </tbody>
@@ -513,20 +513,20 @@
                       [&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]
                     </td>
                     <td style="padding: 5px 6px; border-bottom: 1px solid #eee; text-align: center; font-weight: 600; font-size: 13px;">
-                      {{ item.quantity_ordered || item.quantity }}
+                      {{ item.quantity_ordered }}
                     </td>
                     <td :style="`padding: 5px 6px; border-bottom: 1px solid #eee; text-align: center; color: #666; font-size: 11px;${(item.unit_type || 'box') === 'piece' ? ' background: #e8e8e8;' : ''}`">
                       {{ (item.unit_type || 'box') === 'box' ? 'Koli' : 'Adet' }}
                     </td>
                     <td style="padding: 5px 6px; border-bottom: 1px solid #eee; font-size: 12px;">
-                      {{ item.product?.name || item.name || 'Ürün' }}
+                      {{ item.product?.name || 'Ürün' }}
                     </td>
                     <td style="padding: 5px 6px; border-bottom: 1px solid #eee; text-align: center; color: #666; font-size: 11px; white-space: nowrap;">
-                      <template v-if="(item.unit_type || 'box') === 'box' && (item.pieces_per_box || item.product?.pieces_per_box) > 1">
-                        {{ (item.quantity_ordered || item.quantity) * (item.pieces_per_box || item.product?.pieces_per_box) }} ad
+                      <template v-if="(item.unit_type || 'box') === 'box' && (item.pieces_per_box ?? item.product?.pieces_per_box ?? 1) > 1">
+                        {{ item.quantity_ordered * (item.pieces_per_box ?? item.product?.pieces_per_box ?? 1) }} ad
                       </template>
                       <template v-else>
-                        {{ item.quantity_ordered || item.quantity }} ad
+                        {{ item.quantity_ordered }} ad
                       </template>
                     </td>
                   </tr>
@@ -621,7 +621,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { orderApi, customerApi } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
-import type { Order } from '@/types'
+import type { Order, OrderItem } from '@/types'
+import { logger } from '@/utils/logger'
+import { getErrorMessage } from '@/utils/error'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -699,10 +701,9 @@ const allSelected = computed(() =>
 )
 
 // Handle different API response formats for order items
-const orderDetailItems = computed(() => {
+const orderDetailItems = computed<OrderItem[]>(() => {
   if (!orderDetail.value) return []
-  const detail = orderDetail.value as any
-  return detail.items || detail.order_items || detail.lines || []
+  return orderDetail.value.items || []
 })
 
 // Order detail stats (like cart)
@@ -711,10 +712,9 @@ const orderDetailStats = computed(() => {
   let boxCount = 0
   let pieceCount = 0
 
-  items.forEach((item: any) => {
-    const qty = item.quantity_ordered || item.quantity || 0
-    const unitType = item.unit_type || 'box'
-    if (unitType === 'box') {
+  items.forEach((item) => {
+    const qty = item.quantity_ordered
+    if (item.unit_type === 'box') {
       boxCount += qty
     } else {
       pieceCount += qty
@@ -733,9 +733,9 @@ const orderDetailVatBreakdown = computed(() => {
   const items = orderDetailItems.value
   const rateMap = new Map<number, number>()
 
-  items.forEach((item: any) => {
+  items.forEach((item) => {
     const vatRate = item.vat_rate || 0
-    const lineTotal = item.line_total || ((item.quantity_ordered || item.quantity || 0) * (item.unit_price || item.price || 0))
+    const lineTotal = item.line_total || (item.quantity_ordered * item.unit_price)
     const basePrice = lineTotal / (1 + vatRate / 100)
     const vatAmount = lineTotal - basePrice
 
@@ -755,14 +755,14 @@ const orderDetailVatBreakdown = computed(() => {
 
 // Check if any order item has SKU (for packing list)
 const hasAnySku = computed(() => {
-  return orderDetailItems.value.some((item: any) => item.product?.sku)
+  return orderDetailItems.value.some((item) => item.product?.sku)
 })
 
 const packingPages = computed(() => {
   const items = orderDetailItems.value
   const firstPageSize = 25
   const otherPageSize = 30
-  const pages: any[][] = []
+  const pages: OrderItem[][] = []
   if (items.length <= firstPageSize) {
     pages.push(items)
   } else {
@@ -799,7 +799,7 @@ async function fetchOrders(page = 1) {
     lastPage.value = response.meta.last_page
     hasMore.value = currentPage.value < lastPage.value
   } catch (error) {
-    console.error('Failed to fetch orders:', error)
+    logger.error('Failed to fetch orders:', error)
   } finally {
     isLoading.value = false
     isInitialLoad.value = false
@@ -903,7 +903,7 @@ async function viewOrder(order: Order) {
     }
     orderDetail.value = fullData
   } catch (error) {
-    console.error('Failed to fetch order detail:', error)
+    logger.error('Failed to fetch order detail:', error)
   } finally {
     isLoadingDetail.value = false
   }
@@ -928,11 +928,11 @@ async function handleSyncToAfas() {
     } else {
       syncMessage.value = { type: 'error', text: result.message || 'Sipariş gönderilemedi' }
     }
-  } catch (error: any) {
-    console.error('Failed to sync order:', error)
+  } catch (error: unknown) {
+    logger.error('Failed to sync order:', error)
     syncMessage.value = {
       type: 'error',
-      text: error.response?.data?.message || error.message || 'AFAS\'a gönderim başarısız'
+      text: getErrorMessage(error, 'AFAS\'a gönderim başarısız')
     }
   } finally {
     isSyncing.value = false

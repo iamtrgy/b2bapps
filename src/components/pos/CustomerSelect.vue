@@ -7,7 +7,7 @@
         />
         <ComboboxInput
           class="w-full pl-10 pr-10 py-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-sm"
-          :display-value="(customer: any) => customer?.company_name || ''"
+          :display-value="(item: unknown) => (item as Customer | undefined)?.company_name || ''"
           placeholder="Search and select a customer..."
           @change="handleSearch"
         />

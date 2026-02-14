@@ -3,8 +3,53 @@ import { ref, computed } from 'vue'
 import { productApi } from '@/services/api'
 import { useOfflineStore } from '@/stores/offline'
 import type { Product } from '@/types'
+import type { CachedProduct } from '@/services/db'
+import { logger } from '@/utils/logger'
+import { isCanceledError } from '@/utils/error'
 
 const PAGE_SIZE = 50
+
+/** Map a CachedProduct (from IndexedDB) to the full Product shape with safe defaults */
+function cachedToProduct(p: CachedProduct): Product {
+  return {
+    id: p.id,
+    name: p.name,
+    sku: p.sku,
+    barcode: p.barcode ?? null,
+    barcode_box: p.barcode_box ?? null,
+    image_url: p.image_url,
+    base_price: p.base_price,
+    price_list_price: p.base_price,
+    price_list_discount: 0,
+    price_list_discount_percent: 0,
+    promotion_discount: 0,
+    promotion_discount_percent: 0,
+    customer_price: p.box_price,
+    total_discount: p.total_discount,
+    total_discount_percent: p.total_discount_percent,
+    pricing_source: 'cache',
+    promotion_id: null,
+    promotion_name: null,
+    promotion_type: null,
+    promotion_value: null,
+    pieces_per_box: p.pieces_per_box,
+    piece_price: p.piece_price,
+    box_price: p.box_price,
+    allow_broken_case: p.allow_broken_case,
+    broken_case_discount: 0,
+    broken_case_piece_price: p.broken_case_piece_price,
+    vat_rate: p.vat_rate,
+    stock_quantity: 0,
+    availability_status: (p.availability_status as Product['availability_status']) || 'in_stock',
+    can_purchase: p.can_purchase,
+    allow_backorder: p.allow_backorder,
+    is_preorder: p.is_preorder,
+    boxes_per_case: 1,
+    moq_quantity: 1,
+    moq_unit: 'box',
+    category_id: p.category_id,
+  } as Product
+}
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 export const useProductStore = defineStore('products', () => {
@@ -109,6 +154,19 @@ export const useProductStore = defineStore('products', () => {
   const hasProducts = computed(() => displayProducts.value.length > 0)
   const productCount = computed(() => displayProducts.value.length)
 
+  // Shared offline search helper
+  async function filterOfflineProducts(query: string): Promise<Product[]> {
+    const offlineStore = useOfflineStore()
+    const cachedProducts = await offlineStore.getOfflineProducts(0)
+    const queryLower = query.toLowerCase()
+    return cachedProducts.filter(p =>
+      p.name.toLowerCase().includes(queryLower) ||
+      p.sku?.toLowerCase().includes(queryLower) ||
+      p.barcode?.toLowerCase().includes(queryLower) ||
+      p.barcode_box?.toLowerCase().includes(queryLower)
+    ).map(cachedToProduct)
+  }
+
   // Actions
   async function searchProducts(query: string, customerId: number) {
     searchQuery.value = query
@@ -124,34 +182,17 @@ export const useProductStore = defineStore('products', () => {
 
     try {
       if (offlineStore.isOnline) {
-        // Online: search via API
         const response = await productApi.search(query, customerId)
         products.value = response.products
         isOfflineMode.value = false
       } else {
-        // Offline: search in cached products (use global cache key 0)
-        const cachedProducts = await offlineStore.getOfflineProducts(0)
-        const queryLower = query.toLowerCase()
-        products.value = cachedProducts.filter(p =>
-          p.name.toLowerCase().includes(queryLower) ||
-          p.sku?.toLowerCase().includes(queryLower) ||
-          p.barcode?.toLowerCase().includes(queryLower) ||
-          p.barcode_box?.toLowerCase().includes(queryLower)
-        ) as unknown as Product[]
+        products.value = await filterOfflineProducts(query)
         isOfflineMode.value = true
       }
     } catch (error) {
-      console.error('Failed to search products:', error)
-      // Try offline search on error (use global cache key 0)
+      logger.error('Failed to search products:', error)
       try {
-        const cachedProducts = await offlineStore.getOfflineProducts(0)
-        const queryLower = query.toLowerCase()
-        products.value = cachedProducts.filter(p =>
-          p.name.toLowerCase().includes(queryLower) ||
-          p.sku?.toLowerCase().includes(queryLower) ||
-          p.barcode?.toLowerCase().includes(queryLower) ||
-          p.barcode_box?.toLowerCase().includes(queryLower)
-        ) as unknown as Product[]
+        products.value = await filterOfflineProducts(query)
         isOfflineMode.value = true
       } catch {
         products.value = []
@@ -167,7 +208,7 @@ export const useProductStore = defineStore('products', () => {
       const response = await productApi.findByBarcode(barcode, customerId)
       return response
     } catch (error) {
-      console.error('Failed to find product by barcode:', error)
+      logger.error('Failed to find product by barcode:', error)
       return { success: false, message: 'Product not found' }
     } finally {
       isLoading.value = false
@@ -203,17 +244,17 @@ export const useProductStore = defineStore('products', () => {
       } else {
         // Offline: use cached data (show all products as fallback)
         const cachedProducts = await offlineStore.getOfflineProducts(0)
-        bestSellers.value = cachedProducts.slice(0, 20) as unknown as Product[]
+        bestSellers.value = cachedProducts.slice(0, 20).map(cachedToProduct)
         isOfflineMode.value = true
       }
-    } catch (error: any) {
-      if (error?.name === 'CanceledError' || signal.aborted) return
-      console.error('Failed to load best sellers:', error)
+    } catch (error: unknown) {
+      if (isCanceledError(error) || signal.aborted) return
+      logger.error('Failed to load best sellers:', error)
       // Try to use cached data on error
       try {
         const cachedProducts = await offlineStore.getOfflineProducts(0)
         if (cachedProducts.length > 0) {
-          bestSellers.value = cachedProducts.slice(0, 20) as unknown as Product[]
+          bestSellers.value = cachedProducts.slice(0, 20).map(cachedToProduct)
           isOfflineMode.value = true
         } else {
           bestSellers.value = []
@@ -242,9 +283,9 @@ export const useProductStore = defineStore('products', () => {
       const response = await productApi.getFavorites(customerId, signal)
       favorites.value = response.products
       markCacheFresh('favorites', customerId)
-    } catch (error: any) {
-      if (error?.name === 'CanceledError' || signal.aborted) return
-      console.error('Failed to load favorites:', error)
+    } catch (error: unknown) {
+      if (isCanceledError(error) || signal.aborted) return
+      logger.error('Failed to load favorites:', error)
       favorites.value = []
     } finally {
       isLoading.value = false
@@ -267,9 +308,9 @@ export const useProductStore = defineStore('products', () => {
       const response = await productApi.getDiscounted(customerId, signal)
       discounted.value = response.products
       markCacheFresh('discounted', customerId)
-    } catch (error: any) {
-      if (error?.name === 'CanceledError' || signal.aborted) return
-      console.error('Failed to load discounted products:', error)
+    } catch (error: unknown) {
+      if (isCanceledError(error) || signal.aborted) return
+      logger.error('Failed to load discounted products:', error)
       discounted.value = []
     } finally {
       isLoading.value = false
@@ -318,21 +359,21 @@ export const useProductStore = defineStore('products', () => {
         // Offline: filter cached products by category with client-side pagination
         const cachedProducts = (await offlineStore.getOfflineProducts(0)).filter(p =>
           p.category_id === categoryId
-        ) as unknown as Product[]
+        ).map(cachedToProduct)
         offlineCachedProducts.value = cachedProducts
         categoryProducts.value = cachedProducts.slice(0, PAGE_SIZE)
         hasMore.value = cachedProducts.length > PAGE_SIZE
         totalCount.value = cachedProducts.length
         isOfflineMode.value = true
       }
-    } catch (error: any) {
-      if (error?.name === 'CanceledError' || signal.aborted) return
-      console.error('Failed to load category products:', error)
+    } catch (error: unknown) {
+      if (isCanceledError(error) || signal.aborted) return
+      logger.error('Failed to load category products:', error)
       // Try offline mode on error
       try {
         const cachedProducts = (await offlineStore.getOfflineProducts(0)).filter(p =>
           p.category_id === categoryId
-        ) as unknown as Product[]
+        ).map(cachedToProduct)
         offlineCachedProducts.value = cachedProducts
         categoryProducts.value = cachedProducts.slice(0, PAGE_SIZE)
         hasMore.value = cachedProducts.length > PAGE_SIZE
@@ -378,19 +419,19 @@ export const useProductStore = defineStore('products', () => {
         offlineStore.cacheProductsForCustomer(response.products, customerId)
       } else {
         // Offline: use cached data with client-side pagination
-        const cachedProducts = await offlineStore.getOfflineProducts(0) as unknown as Product[]
+        const cachedProducts = (await offlineStore.getOfflineProducts(0)).map(cachedToProduct)
         offlineCachedProducts.value = cachedProducts
         allProducts.value = cachedProducts.slice(0, PAGE_SIZE)
         hasMore.value = cachedProducts.length > PAGE_SIZE
         totalCount.value = cachedProducts.length
         isOfflineMode.value = true
       }
-    } catch (error: any) {
-      if (error?.name === 'CanceledError' || signal.aborted) return
-      console.error('Failed to load all products:', error)
+    } catch (error: unknown) {
+      if (isCanceledError(error) || signal.aborted) return
+      logger.error('Failed to load all products:', error)
       // Try to use cached data on error
       try {
-        const cachedProducts = await offlineStore.getOfflineProducts(0) as unknown as Product[]
+        const cachedProducts = (await offlineStore.getOfflineProducts(0)).map(cachedToProduct)
         if (cachedProducts.length > 0) {
           offlineCachedProducts.value = cachedProducts
           allProducts.value = cachedProducts.slice(0, PAGE_SIZE)
@@ -446,7 +487,7 @@ export const useProductStore = defineStore('products', () => {
       offset.value = newOffset
       hasMore.value = response.hasMore ?? false
     } catch (error) {
-      console.error('Failed to load more products:', error)
+      logger.error('Failed to load more products:', error)
     } finally {
       isLoadingMore.value = false
     }

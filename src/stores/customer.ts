@@ -3,6 +3,21 @@ import { ref, computed } from 'vue'
 import { customerApi } from '@/services/api'
 import { useOfflineStore } from '@/stores/offline'
 import type { Customer } from '@/types'
+import type { CachedCustomer } from '@/services/db'
+import { logger } from '@/utils/logger'
+
+/** Map a CachedCustomer (from IndexedDB) to the Customer shape with safe defaults */
+function cachedToCustomer(c: CachedCustomer): Customer {
+  return {
+    id: c.id,
+    afas_debtor_id: c.afas_debtor_id,
+    company_name: c.company_name,
+    contact_name: c.contact_name ?? '',
+    contact_email: c.contact_email ?? '',
+    contact_phone: c.contact_phone ?? '',
+    customer_tier: (c.customer_tier as Customer['customer_tier']) || 'bronze',
+  }
+}
 
 export const useCustomerStore = defineStore('customer', () => {
   // State
@@ -18,6 +33,22 @@ export const useCustomerStore = defineStore('customer', () => {
   // Getters
   const hasMore = computed(() => currentPage.value < lastPage.value)
 
+  // Shared offline customer search helper
+  async function filterOfflineCustomers(search?: string): Promise<Customer[]> {
+    const offlineStore = useOfflineStore()
+    const cachedCustomers = await offlineStore.getOfflineCustomers()
+    if (search) {
+      const searchLower = search.toLowerCase()
+      return cachedCustomers.filter(c =>
+        c.company_name.toLowerCase().includes(searchLower) ||
+        c.contact_name?.toLowerCase().includes(searchLower) ||
+        c.contact_email?.toLowerCase().includes(searchLower) ||
+        c.afas_debtor_id?.toLowerCase().includes(searchLower)
+      ).map(cachedToCustomer)
+    }
+    return cachedCustomers.map(cachedToCustomer)
+  }
+
   // Actions
   async function fetchCustomers(page = 1, search?: string) {
     isLoading.value = true
@@ -25,7 +56,6 @@ export const useCustomerStore = defineStore('customer', () => {
 
     try {
       if (offlineStore.isOnline) {
-        // Online: fetch from API
         const response = await customerApi.list(page, search)
 
         if (page === 1) {
@@ -39,47 +69,20 @@ export const useCustomerStore = defineStore('customer', () => {
         total.value = response.meta.total
         isOfflineMode.value = false
 
-        // Cache customers for offline use
         if (page === 1 && !search) {
           offlineStore.cacheCustomerList(response.data)
         }
       } else {
-        // Offline: use cached customers
-        const cachedCustomers = await offlineStore.getOfflineCustomers()
-
-        if (search) {
-          const searchLower = search.toLowerCase()
-          customers.value = cachedCustomers.filter(c =>
-            c.company_name.toLowerCase().includes(searchLower) ||
-            c.contact_name?.toLowerCase().includes(searchLower) ||
-            c.contact_email?.toLowerCase().includes(searchLower) ||
-            c.afas_debtor_id?.toLowerCase().includes(searchLower)
-          ) as unknown as Customer[]
-        } else {
-          customers.value = cachedCustomers as unknown as Customer[]
-        }
-
+        customers.value = await filterOfflineCustomers(search)
         currentPage.value = 1
         lastPage.value = 1
         total.value = customers.value.length
         isOfflineMode.value = true
       }
     } catch (error) {
-      console.error('Failed to fetch customers:', error)
-      // Try offline mode on error
+      logger.error('Failed to fetch customers:', error)
       try {
-        const cachedCustomers = await offlineStore.getOfflineCustomers()
-        if (search) {
-          const searchLower = search.toLowerCase()
-          customers.value = cachedCustomers.filter(c =>
-            c.company_name.toLowerCase().includes(searchLower) ||
-            c.contact_name?.toLowerCase().includes(searchLower) ||
-            c.contact_email?.toLowerCase().includes(searchLower) ||
-            c.afas_debtor_id?.toLowerCase().includes(searchLower)
-          ) as unknown as Customer[]
-        } else {
-          customers.value = cachedCustomers as unknown as Customer[]
-        }
+        customers.value = await filterOfflineCustomers(search)
         isOfflineMode.value = true
       } catch {
         customers.value = []
@@ -113,7 +116,7 @@ export const useCustomerStore = defineStore('customer', () => {
       try {
         customer = await customerApi.get(id)
       } catch (error) {
-        console.error('Failed to fetch customer:', error)
+        logger.error('Failed to fetch customer:', error)
         throw error
       }
     }

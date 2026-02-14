@@ -164,6 +164,7 @@ import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Loading from '@/components/ui/Loading.vue'
 import { barcodeApi } from '@/services/api'
+import { logger } from '@/utils/logger'
 import type { Product } from '@/types'
 
 const products = ref<Product[]>([])
@@ -200,7 +201,7 @@ async function fetchProducts(page = 1, search?: string) {
     lastPage.value = response.meta.last_page
     hasMore.value = currentPage.value < lastPage.value
   } catch (error) {
-    console.error('Failed to fetch products:', error)
+    logger.error('Failed to fetch products:', error)
   } finally {
     isLoading.value = false
   }
@@ -243,7 +244,7 @@ async function saveBarcode(productId: number, type: 'piece' | 'box') {
     // Clear input
     barcodeInputs[productId]![type] = ''
   } catch (error) {
-    console.error('Failed to save barcode:', error)
+    logger.error('Failed to save barcode:', error)
   } finally {
     savingBarcode.value = null
   }
@@ -264,7 +265,7 @@ async function clearBarcode(productId: number, type: 'piece' | 'box') {
       }
     }
   } catch (error) {
-    console.error('Failed to clear barcode:', error)
+    logger.error('Failed to clear barcode:', error)
   } finally {
     savingBarcode.value = null
   }

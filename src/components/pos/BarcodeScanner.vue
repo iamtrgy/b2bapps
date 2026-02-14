@@ -80,6 +80,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { AlertTriangle, Loader2 } from 'lucide-vue-next'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { logger } from '@/utils/logger'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -111,7 +112,7 @@ async function initCamera() {
       videoRef.value.srcObject = stream
     }
   } catch (err: any) {
-    console.error('Camera error:', err)
+    logger.error('Camera error:', err)
     if (err.name === 'NotAllowedError') {
       error.value = 'Kamera erişimi reddedildi. Lütfen kamera erişimine izin verin.'
     } else if (err.name === 'NotFoundError') {

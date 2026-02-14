@@ -130,6 +130,8 @@ export interface Product {
   // MOQ
   moq_quantity: number
   moq_unit: 'piece' | 'box'
+  // Category
+  category_id?: number | null
 }
 
 // Cart types
