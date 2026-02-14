@@ -2,17 +2,22 @@
   <Sheet :open="open" @update:open="$emit('update:open', $event)">
     <SheetContent side="right" class="w-full sm:max-w-md flex flex-col !px-0 !pt-0">
       <!-- Header -->
-      <SheetHeader class="p-4 border-b">
+      <SheetHeader class="p-4 pr-12 border-b">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <Wifi v-if="offlineStore.isOnline" class="h-5 w-5 text-green-500" />
-            <WifiOff v-else class="h-5 w-5 text-red-500" />
-            <SheetTitle class="text-base">Çevrimdışı Modu</SheetTitle>
+            <Wifi v-if="offlineStore.isOnline" class="h-5 w-5 text-green-500 shrink-0" />
+            <WifiOff v-else class="h-5 w-5 text-red-500 shrink-0" />
+            <div>
+              <SheetTitle class="text-base">Çevrimdışı Modu</SheetTitle>
+              <p class="text-sm text-muted-foreground">
+                {{ offlineStore.isOnline ? 'Bağlantı aktif' : 'İnternet bağlantısı yok' }}
+              </p>
+            </div>
           </div>
           <Button
             variant="outline"
             size="sm"
-            class="h-8 px-3 text-xs"
+            class="h-7 px-2.5 text-xs shrink-0"
             :disabled="offlineStore.isCheckingConnection"
             @click="handleCheckConnection"
           >
@@ -21,9 +26,6 @@
             Kontrol Et
           </Button>
         </div>
-        <p class="text-sm text-muted-foreground mt-1">
-          {{ offlineStore.isOnline ? 'Bağlantı aktif' : 'İnternet bağlantısı yok' }}
-        </p>
       </SheetHeader>
 
       <!-- Content -->
