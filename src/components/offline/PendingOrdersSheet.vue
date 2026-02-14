@@ -2,29 +2,24 @@
   <Sheet :open="open" @update:open="$emit('update:open', $event)">
     <SheetContent side="right" class="w-full sm:max-w-md flex flex-col !px-0 !pt-0">
       <!-- Header -->
-      <SheetHeader class="p-4 pr-12 border-b">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <Wifi v-if="offlineStore.isOnline" class="h-5 w-5 text-green-500 shrink-0" />
-            <WifiOff v-else class="h-5 w-5 text-red-500 shrink-0" />
-            <div>
-              <SheetTitle class="text-base">Çevrimdışı Modu</SheetTitle>
-              <p class="text-sm text-muted-foreground">
-                {{ offlineStore.isOnline ? 'Bağlantı aktif' : 'İnternet bağlantısı yok' }}
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            class="h-7 px-2.5 text-xs shrink-0"
+      <SheetHeader class="p-4 border-b">
+        <div class="flex items-center gap-2">
+          <Wifi v-if="offlineStore.isOnline" class="h-5 w-5 text-green-500 shrink-0" />
+          <WifiOff v-else class="h-5 w-5 text-red-500 shrink-0" />
+          <SheetTitle class="text-base">Çevrimdışı Modu</SheetTitle>
+        </div>
+        <div class="flex items-center gap-2 mt-1">
+          <p class="text-sm text-muted-foreground">
+            {{ offlineStore.isOnline ? 'Bağlantı aktif' : 'İnternet bağlantısı yok' }}
+          </p>
+          <button
+            class="inline-flex items-center justify-center rounded-full h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
             :disabled="offlineStore.isCheckingConnection"
             @click="handleCheckConnection"
           >
-            <Loader2 v-if="offlineStore.isCheckingConnection" class="h-3 w-3 mr-1 animate-spin" />
-            <RefreshCw v-else class="h-3 w-3 mr-1" />
-            Kontrol Et
-          </Button>
+            <Loader2 v-if="offlineStore.isCheckingConnection" class="h-3.5 w-3.5 animate-spin" />
+            <RefreshCw v-else class="h-3.5 w-3.5" />
+          </button>
         </div>
       </SheetHeader>
 
