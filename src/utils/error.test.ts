@@ -14,9 +14,42 @@ describe('getErrorMessage', () => {
     expect(getErrorMessage(error)).toBe('Invalid credentials')
   })
 
+  it('extracts message from axios error response.data.message', () => {
+    const error = new AxiosError('Request failed', '422', undefined, undefined, {
+      status: 422,
+      statusText: 'Unprocessable Entity',
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+      data: { message: 'Validation failed' },
+    })
+    expect(getErrorMessage(error)).toBe('Validation failed')
+  })
+
   it('falls back to error.message when response has no message', () => {
     const error = new AxiosError('Network Error')
     expect(getErrorMessage(error)).toBe('Network Error')
+  })
+
+  it('falls back to error.message when response.data exists but message is undefined', () => {
+    const error = new AxiosError('Server Error', '500', undefined, undefined, {
+      status: 500,
+      statusText: 'Internal Server Error',
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+      data: { errors: ['something went wrong'] },
+    })
+    expect(getErrorMessage(error)).toBe('Server Error')
+  })
+
+  it('falls back to error.message when response.data is null', () => {
+    const error = new AxiosError('Bad Gateway', '502', undefined, undefined, {
+      status: 502,
+      statusText: 'Bad Gateway',
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+      data: null,
+    })
+    expect(getErrorMessage(error)).toBe('Bad Gateway')
   })
 
   it('returns message from a generic Error', () => {

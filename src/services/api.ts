@@ -211,7 +211,8 @@ export const productApi = {
 
   getPurchaseHistory: async (
     customerId: number,
-    productId: number
+    productId: number,
+    signal?: AbortSignal
   ): Promise<{
     success: boolean
     history: Array<{
@@ -231,6 +232,7 @@ export const productApi = {
   }> => {
     const response = await api.get('/products/purchase-history', {
       params: { customer_id: customerId, product_id: productId },
+      signal,
     })
     return response.data
   },

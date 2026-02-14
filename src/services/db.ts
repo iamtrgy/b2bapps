@@ -431,8 +431,22 @@ export async function deletePendingOrder(localId: number): Promise<void> {
 }
 
 export async function getPendingOrderCount(): Promise<number> {
-  const orders = await getPendingOrders()
-  return orders.filter(o => o.sync_status === 'pending' || o.sync_status === 'failed').length
+  const database = await initDB()
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction(STORES.PENDING_ORDERS, 'readonly')
+    const store = tx.objectStore(STORES.PENDING_ORDERS)
+    const index = store.index('sync_status')
+
+    let total = 0
+    const pendingReq = index.count('pending')
+    const failedReq = index.count('failed')
+
+    pendingReq.onsuccess = () => { total += pendingReq.result }
+    failedReq.onsuccess = () => { total += failedReq.result }
+
+    tx.oncomplete = () => resolve(total)
+    tx.onerror = () => reject(tx.error)
+  })
 }
 
 // ============ Sync Metadata ============

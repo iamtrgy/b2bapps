@@ -308,6 +308,97 @@ describe('cart store', () => {
     })
   })
 
+  // --- totalDiscount with promotions ---
+  describe('totalDiscount with promotions', () => {
+    it('includes promotion discount_amount in totalDiscount', () => {
+      cart.addItem(makeProduct({ id: 1, total_discount: 2 }), 1, 'box')
+      cart.setAppliedPromotions([
+        { id: 10, name: 'Promo A', discount_amount: 5 } as any,
+        { id: 11, name: 'Promo B', discount_amount: 3 } as any,
+      ])
+      // item discount: 2 * 1 = 2, promotion discounts: 5 + 3 = 8, total = 10
+      expect(cart.totalDiscount).toBe(10)
+    })
+
+    it('handles promotions with no discount_amount', () => {
+      cart.addItem(makeProduct({ id: 1, total_discount: 1 }), 2, 'box')
+      cart.setAppliedPromotions([
+        { id: 10, name: 'Promo' } as any,
+      ])
+      // item discount: 1 * 2 = 2, promotion discount_amount is undefined → 0
+      expect(cart.totalDiscount).toBe(2)
+    })
+  })
+
+  // --- setAppliedPromotions / setCouponCode ---
+  describe('setAppliedPromotions / setCouponCode', () => {
+    it('sets promotions', () => {
+      const promos = [{ id: 1, name: 'Test' }] as any
+      cart.setAppliedPromotions(promos)
+      expect(cart.appliedPromotions).toEqual(promos)
+    })
+
+    it('sets coupon code', () => {
+      cart.setCouponCode('SAVE10')
+      expect(cart.couponCode).toBe('SAVE10')
+    })
+
+    it('clears coupon code with null', () => {
+      cart.setCouponCode('SAVE10')
+      cart.setCouponCode(null)
+      expect(cart.couponCode).toBeNull()
+    })
+  })
+
+  // --- getOrderPayload return mode with reference ---
+  describe('getOrderPayload return mode with reference', () => {
+    it('includes return_reference_order_id in return mode payload', () => {
+      cart.setCustomer(makeCustomer())
+      cart.enterReturnMode()
+      cart.returnReferenceOrderId = 999
+      cart.items.push({
+        product_id: 1, name: 'R', sku: 'R-1', image_url: null,
+        price: 50, base_price: 50, total_discount: 0, total_discount_percent: 0,
+        quantity: 2, unit_type: 'piece', pieces_per_box: 1, vat_rate: 18,
+      })
+
+      const payload = cart.getOrderPayload()
+      expect(payload.type).toBe('return')
+      expect(payload.return_reference_order_id).toBe(999)
+    })
+
+    it('includes applied_promotions in normal mode payload', () => {
+      cart.setCustomer(makeCustomer())
+      cart.addItem(makeProduct(), 1, 'box')
+      cart.setAppliedPromotions([{ id: 5, name: 'P', discount_amount: 10 } as any])
+
+      const payload = cart.getOrderPayload()
+      expect(payload.applied_promotions).toHaveLength(1)
+      expect(payload.applied_promotions![0].promotion_id).toBe(5)
+      expect(payload.applied_promotions![0].discount_amount).toBe(10)
+    })
+  })
+
+  // --- clearLastRemoved ---
+  describe('clearLastRemoved', () => {
+    it('clears the last removed item', () => {
+      cart.addItem(makeProduct(), 1, 'box')
+      cart.removeItem(0)
+      expect(cart.lastRemovedItem).not.toBeNull()
+
+      cart.clearLastRemoved()
+      expect(cart.lastRemovedItem).toBeNull()
+    })
+  })
+
+  // --- setNotes ---
+  describe('setNotes', () => {
+    it('setNotes updates notes value', () => {
+      cart.setNotes('test note')
+      expect(cart.notes).toBe('test note')
+    })
+  })
+
   // --- Return mode ---
   describe('return mode', () => {
     it('enterReturnMode sets flag and clears cart', () => {

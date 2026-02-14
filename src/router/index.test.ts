@@ -26,9 +26,8 @@ const { default: router } = await import('./index')
 describe('router guards', () => {
   beforeEach(async () => {
     setActivePinia(createPinia())
-    // Reset router to a clean state
-    router.push('/')
-    await router.isReady()
+    // Reset router to a clean state — must await push (isReady only waits for first nav)
+    await router.push('/')
   })
 
   it('redirects / to /tenant', async () => {
@@ -67,5 +66,48 @@ describe('router guards', () => {
     await router.push('/login')
     await router.isReady()
     expect(router.currentRoute.value.name).toBe('pos')
+  })
+
+  it('redirects protected routes to /login when unauthenticated but tenant exists', async () => {
+    const authStore = useAuthStore()
+    authStore.$patch({
+      token: null,
+      user: null,
+      tenant: { id: '1', name: 'test', company_name: 'Test', logo_url: null, api_base_url: 'http://localhost' },
+    })
+
+    await router.push('/pos')
+    await router.isReady()
+    expect(router.currentRoute.value.name).toBe('login')
+  })
+
+  it('redirects /tenant to /pos when authenticated', async () => {
+    const authStore = useAuthStore()
+    authStore.$patch({
+      token: 'test-token',
+      user: { id: 1, name: 'Test', email: 'test@test.com', role: 'admin' },
+      tenant: { id: '1', name: 'test', company_name: 'Test', logo_url: null, api_base_url: 'http://localhost' },
+    })
+
+    // beforeEach leaves router at /tenant; navigate away first to avoid duplicate nav
+    await router.push('/pos')
+    expect(router.currentRoute.value.name).toBe('pos')
+
+    // Now test the /tenant → /pos redirect
+    await router.push('/tenant')
+    expect(router.currentRoute.value.name).toBe('pos')
+  })
+
+  it('allows authenticated access to /orders', async () => {
+    const authStore = useAuthStore()
+    authStore.$patch({
+      token: 'test-token',
+      user: { id: 1, name: 'Test', email: 'test@test.com', role: 'user' },
+      tenant: { id: '1', name: 'test', company_name: 'Test', logo_url: null, api_base_url: 'http://localhost' },
+    })
+
+    await router.push('/orders')
+    await router.isReady()
+    expect(router.currentRoute.value.name).toBe('orders')
   })
 })

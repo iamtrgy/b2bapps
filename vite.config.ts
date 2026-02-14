@@ -10,6 +10,18 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
     },
   },
+  build: {
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue-vendor': ['vue', 'vue-router', 'pinia'],
+          'ui-vendor': ['reka-ui', 'lucide-vue-next'],
+          'api-vendor': ['axios'],
+        },
+      },
+    },
+  },
   clearScreen: false,
   server: {
     port: 1420,
