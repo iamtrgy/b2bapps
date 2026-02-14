@@ -38,6 +38,7 @@ export const useOfflineStore = defineStore('offline', () => {
   // State
   const isOnline = ref(true)
   const isInitialized = ref(false)
+  const isCheckingConnection = ref(false)
   const pendingOrderCount = ref(0)
   const isSyncing = ref(false)
   const lastSyncTime = ref<number | null>(null)
@@ -56,9 +57,49 @@ export const useOfflineStore = defineStore('offline', () => {
   // Getters
   const hasUnsyncedOrders = computed(() => pendingOrderCount.value > 0)
 
-  // Check network connectivity by pinging the tenant's API
+  // Check network connectivity by actually pinging the API server
   async function checkNetworkStatus(): Promise<boolean> {
-    return navigator.onLine
+    // Quick check — if browser says offline, don't even try
+    if (!navigator.onLine) return false
+
+    try {
+      // Import api lazily to avoid circular dependency
+      const { default: api } = await import('@/services/api')
+      const baseURL = api.defaults.baseURL
+      if (!baseURL) return navigator.onLine
+
+      // Ping the API with a short timeout — HEAD request to minimize payload
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 5000)
+      await fetch(baseURL, {
+        method: 'HEAD',
+        signal: controller.signal,
+        cache: 'no-store',
+      })
+      clearTimeout(timeout)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  // Manual connection check triggered by user
+  async function forceCheckConnection(): Promise<boolean> {
+    isCheckingConnection.value = true
+    try {
+      const wasOnline = isOnline.value
+      const online = await checkNetworkStatus()
+      isOnline.value = online
+
+      // If we just came online, sync pending orders
+      if (!wasOnline && online && pendingOrderCount.value > 0) {
+        syncPendingOrders()
+      }
+
+      return online
+    } finally {
+      isCheckingConnection.value = false
+    }
   }
 
   // Initialize the offline system
@@ -648,6 +689,7 @@ export const useOfflineStore = defineStore('offline', () => {
     // State
     isOnline,
     isInitialized,
+    isCheckingConnection,
     pendingOrderCount,
     isSyncing,
     lastSyncTime,
@@ -666,6 +708,7 @@ export const useOfflineStore = defineStore('offline', () => {
     // Actions
     initialize,
     cleanup,
+    forceCheckConnection,
     cacheProductsForCustomer,
     getOfflineProducts,
     downloadAllProducts,

@@ -3,10 +3,23 @@
     <SheetContent side="right" class="w-full sm:max-w-md flex flex-col !px-0 !pt-0">
       <!-- Header -->
       <SheetHeader class="p-4 border-b">
-        <div class="flex items-center gap-2">
-          <Wifi v-if="offlineStore.isOnline" class="h-5 w-5 text-green-500" />
-          <WifiOff v-else class="h-5 w-5 text-red-500" />
-          <SheetTitle class="text-base">Çevrimdışı Modu</SheetTitle>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <Wifi v-if="offlineStore.isOnline" class="h-5 w-5 text-green-500" />
+            <WifiOff v-else class="h-5 w-5 text-red-500" />
+            <SheetTitle class="text-base">Çevrimdışı Modu</SheetTitle>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            class="h-8 px-3 text-xs"
+            :disabled="offlineStore.isCheckingConnection"
+            @click="handleCheckConnection"
+          >
+            <Loader2 v-if="offlineStore.isCheckingConnection" class="h-3 w-3 mr-1 animate-spin" />
+            <RefreshCw v-else class="h-3 w-3 mr-1" />
+            Kontrol Et
+          </Button>
         </div>
         <p class="text-sm text-muted-foreground mt-1">
           {{ offlineStore.isOnline ? 'Bağlantı aktif' : 'İnternet bağlantısı yok' }}
@@ -225,7 +238,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { Clock, Cloud, CloudOff, Wifi, WifiOff, Loader2, CheckCircle, AlertCircle, Package, Download, Users, ClipboardList, Trash2 } from 'lucide-vue-next'
+import { Clock, Cloud, CloudOff, Wifi, WifiOff, Loader2, CheckCircle, AlertCircle, Package, Download, Users, ClipboardList, Trash2, RefreshCw } from 'lucide-vue-next'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -295,6 +308,10 @@ async function handleDownloadAll() {
   }
   await offlineStore.downloadAllCustomers()
   await offlineStore.downloadRecentOrders()
+}
+
+async function handleCheckConnection() {
+  await offlineStore.forceCheckConnection()
 }
 
 async function handleSync() {
