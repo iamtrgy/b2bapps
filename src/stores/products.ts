@@ -371,19 +371,13 @@ export const useProductStore = defineStore('products', () => {
 
   // Update a product in all arrays (used when availability changes)
   function updateProduct(updatedProduct: Product) {
-    const updateInArray = (arr: Product[]) => {
+    const arrays = [products.value, allProducts.value, categoryProducts.value, bestSellers.value, favorites.value, discounted.value]
+    for (const arr of arrays) {
       const index = arr.findIndex(p => p.id === updatedProduct.id)
       if (index !== -1) {
         arr[index] = updatedProduct
       }
     }
-
-    updateInArray(products.value)
-    updateInArray(allProducts.value)
-    updateInArray(categoryProducts.value)
-    updateInArray(bestSellers.value)
-    updateInArray(favorites.value)
-    updateInArray(discounted.value)
   }
 
   return {

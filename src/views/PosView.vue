@@ -1270,9 +1270,14 @@ const stockWarnings = computed(() => {
   return warnings
 })
 
+const stockWarningMap = computed(() => {
+  const map = new Map<number, string>()
+  stockWarnings.value.forEach(w => map.set(w.productId, 'Mevcut stoku aşıyor'))
+  return map
+})
+
 function getStockWarning(productId: number): string | undefined {
-  const w = stockWarnings.value.find(w => w.productId === productId)
-  return w ? `Mevcut stoku aşıyor` : undefined
+  return stockWarningMap.value.get(productId)
 }
 
 watch(selectedCustomer, (customer) => {
@@ -1517,6 +1522,10 @@ async function handleBarcodeScan(barcode: string) {
     cartStore.addItem(product, quantity, unitType)
   } else {
     console.error('Product not found for barcode:', barcode)
+    lowStockMessage.value = 'Ürün bulunamadı'
+    showLowStockWarning.value = true
+    if (lowStockTimeout) clearTimeout(lowStockTimeout)
+    lowStockTimeout = setTimeout(() => { showLowStockWarning.value = false }, 3000)
   }
 }
 
@@ -1570,6 +1579,11 @@ async function handleCheckout() {
         orderJustReturned.value = true
         cartStore.exitReturnMode()
         showOrderSuccess.value = true
+      } else {
+        lowStockMessage.value = result.message || 'İade oluşturulamadı'
+        showLowStockWarning.value = true
+        if (lowStockTimeout) clearTimeout(lowStockTimeout)
+        lowStockTimeout = setTimeout(() => { showLowStockWarning.value = false }, 5000)
       }
     } else if (isEditMode.value) {
       // Edit mode: update existing order
@@ -1584,6 +1598,11 @@ async function handleCheckout() {
         cartStore.clearEditMode()
         router.replace('/pos')
         showOrderSuccess.value = true
+      } else {
+        lowStockMessage.value = result.message || 'Sipariş güncellenemedi'
+        showLowStockWarning.value = true
+        if (lowStockTimeout) clearTimeout(lowStockTimeout)
+        lowStockTimeout = setTimeout(() => { showLowStockWarning.value = false }, 5000)
       }
     } else if (offlineStore.isOnline) {
       // Online: send to server
@@ -1595,6 +1614,11 @@ async function handleCheckout() {
         lastOrderNumber.value = result.order_number
         showOrderSuccess.value = true
         cartStore.clear()
+      } else {
+        lowStockMessage.value = result.message || 'Sipariş oluşturulamadı'
+        showLowStockWarning.value = true
+        if (lowStockTimeout) clearTimeout(lowStockTimeout)
+        lowStockTimeout = setTimeout(() => { showLowStockWarning.value = false }, 5000)
       }
     } else {
       // Offline: save locally
@@ -1666,6 +1690,10 @@ async function handleCheckout() {
         cartStore.clear()
       } catch (offlineError) {
         console.error('Failed to save order offline:', offlineError)
+        lowStockMessage.value = 'Sipariş kaydedilemedi. Lütfen tekrar deneyin.'
+        showLowStockWarning.value = true
+        if (lowStockTimeout) clearTimeout(lowStockTimeout)
+        lowStockTimeout = setTimeout(() => { showLowStockWarning.value = false }, 5000)
       }
     }
   } finally {
@@ -1773,8 +1801,11 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown)
-  if (barcodeTimeout) {
-    clearTimeout(barcodeTimeout)
-  }
+  if (barcodeTimeout) clearTimeout(barcodeTimeout)
+  if (addedToastTimeout) clearTimeout(addedToastTimeout)
+  if (undoToastTimeout) clearTimeout(undoToastTimeout)
+  if (lowStockTimeout) clearTimeout(lowStockTimeout)
+  if (customerSearchTimeout) clearTimeout(customerSearchTimeout)
+  if (searchDebounceTimeout) clearTimeout(searchDebounceTimeout)
 })
 </script>
