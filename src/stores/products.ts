@@ -60,9 +60,12 @@ export const useProductStore = defineStore('products', () => {
     if (offlineCache?.customerId === customerId) return offlineCache.products
     const offlineStore = useOfflineStore()
     let cached = await offlineStore.getOfflineProducts(customerId)
-    // Fallback to global cache (cacheKey=0 from "Download All") if customer-specific cache is empty
-    if (cached.length === 0 && customerId !== 0) {
-      cached = await offlineStore.getOfflineProducts(0)
+    // Also check global cache (cacheKey=0 from "Download All") and use whichever has more products
+    if (customerId !== 0) {
+      const globalCached = await offlineStore.getOfflineProducts(0)
+      if (globalCached.length > cached.length) {
+        cached = globalCached
+      }
     }
     offlineCache = { customerId, products: cached }
     return cached

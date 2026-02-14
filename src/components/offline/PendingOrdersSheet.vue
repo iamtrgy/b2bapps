@@ -240,6 +240,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useOfflineStore } from '@/stores/offline'
+import { useCategoryStore } from '@/stores/category'
 import { logger } from '@/utils/logger'
 import { useCustomerStore } from '@/stores/customer'
 import { deleteDatabase, type PendingOrder } from '@/services/db'
@@ -254,6 +255,7 @@ defineEmits<{
 
 const offlineStore = useOfflineStore()
 const customerStore = useCustomerStore()
+const categoryStore = useCategoryStore()
 const pendingOrders = ref<PendingOrder[]>([])
 const isLoading = ref(false)
 
@@ -305,6 +307,8 @@ async function handleDownloadAll() {
   }
   await offlineStore.downloadAllCustomers()
   await offlineStore.downloadRecentOrders()
+  // Also cache categories for offline use
+  await categoryStore.fetchCategories()
 }
 
 async function handleCheckConnection() {

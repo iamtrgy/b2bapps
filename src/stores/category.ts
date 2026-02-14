@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { categoryApi } from '@/services/api'
+import { useOfflineStore } from '@/stores/offline'
 import type { Category } from '@/types'
 import { logger } from '@/utils/logger'
 
@@ -22,12 +23,27 @@ export const useCategoryStore = defineStore('category', () => {
   // Actions
   async function fetchCategories() {
     isLoading.value = true
+    const offlineStore = useOfflineStore()
     try {
       const response = await categoryApi.list(true) // parents only
       categories.value = response.categories || []
+      // Cache for offline use
+      if (categories.value.length > 0) {
+        offlineStore.cacheCategoryList(categories.value)
+      }
     } catch (error) {
       logger.error('Failed to fetch categories:', error)
-      categories.value = []
+      // Fallback to offline cache
+      try {
+        const cached = await offlineStore.getOfflineCategories()
+        if (cached.length > 0) {
+          categories.value = cached as unknown as Category[]
+        } else {
+          categories.value = []
+        }
+      } catch {
+        categories.value = []
+      }
     } finally {
       isLoading.value = false
     }
