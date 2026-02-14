@@ -42,21 +42,44 @@ export function useCheckout({ selectedCustomer, showMobileCart, showErrorToast }
     orderJustUpdated.value = false
     orderJustReturned.value = false
 
-    try {
-      if (cartStore.returnMode) {
-        const payload = cartStore.getOrderPayload()
-        const result = await orderApi.create(payload)
+    // Helper to save order offline (sale or return)
+    const saveOffline = async () => {
+      const localId = await offlineStore.saveOrderOffline({
+        customerId: selectedCustomer.value!.id,
+        customerName: selectedCustomer.value!.company_name,
+        orderType: cartStore.returnMode ? 'return' : 'sale',
+        returnReferenceOrderId: cartStore.returnMode ? cartStore.returnReferenceOrderId : null,
+        items: cartStore.items.map(item => ({
+          product_id: item.product_id,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          base_price: item.base_price,
+          unit_type: item.unit_type,
+          pieces_per_box: item.pieces_per_box,
+          vat_rate: item.vat_rate,
+        })),
+        subtotal: cartStore.subtotal,
+        vatTotal: cartStore.vatTotal,
+        total: cartStore.total,
+        notes: cartStore.notes,
+      })
 
-        if (result.success) {
-          lastOrderId.value = result.order_id
-          lastOrderNumber.value = result.order_number
-          orderJustReturned.value = true
-          cartStore.exitReturnMode()
-          showOrderSuccess.value = true
-        } else {
-          showErrorToast(result.message || 'İade oluşturulamadı', 5000)
-        }
-      } else if (isEditMode.value) {
+      lastOrderId.value = null
+      lastOrderNumber.value = `OFFLINE-${localId}`
+      savedOffline.value = true
+      showOrderSuccess.value = true
+      if (cartStore.returnMode) {
+        orderJustReturned.value = true
+        cartStore.exitReturnMode()
+      } else {
+        cartStore.clear()
+      }
+    }
+
+    try {
+      if (isEditMode.value) {
+        // Edit mode — online only (can't edit offline)
         const payload = cartStore.getOrderPayload()
         const result = await orderApi.update(cartStore.editingOrderId!, payload)
 
@@ -72,42 +95,27 @@ export function useCheckout({ selectedCustomer, showMobileCart, showErrorToast }
           showErrorToast(result.message || 'Sipariş güncellenemedi', 5000)
         }
       } else if (offlineStore.isOnline) {
+        // Online — create sale or return via API
         const payload = cartStore.getOrderPayload()
         const result = await orderApi.create(payload)
 
         if (result.success) {
           lastOrderId.value = result.order_id
           lastOrderNumber.value = result.order_number
+          if (cartStore.returnMode) {
+            orderJustReturned.value = true
+            cartStore.exitReturnMode()
+          } else {
+            cartStore.clear()
+          }
           showOrderSuccess.value = true
-          cartStore.clear()
         } else {
-          showErrorToast(result.message || 'Sipariş oluşturulamadı', 5000)
+          const msg = cartStore.returnMode ? 'İade oluşturulamadı' : 'Sipariş oluşturulamadı'
+          showErrorToast(result.message || msg, 5000)
         }
       } else {
-        const localId = await offlineStore.saveOrderOffline({
-          customerId: selectedCustomer.value.id,
-          customerName: selectedCustomer.value.company_name,
-          items: cartStore.items.map(item => ({
-            product_id: item.product_id,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            base_price: item.base_price,
-            unit_type: item.unit_type,
-            pieces_per_box: item.pieces_per_box,
-            vat_rate: item.vat_rate,
-          })),
-          subtotal: cartStore.subtotal,
-          vatTotal: cartStore.vatTotal,
-          total: cartStore.total,
-          notes: cartStore.notes,
-        })
-
-        lastOrderId.value = null
-        lastOrderNumber.value = `OFFLINE-${localId}`
-        savedOffline.value = true
-        showOrderSuccess.value = true
-        cartStore.clear()
+        // Offline — save locally (both sales and returns)
+        await saveOffline()
       }
     } catch (error: unknown) {
       logger.error('Failed to create order:', error)
@@ -117,33 +125,10 @@ export function useCheckout({ selectedCustomer, showMobileCart, showErrorToast }
         showErrorToast(msg, 5000)
       }
 
-      // If online request fails, try saving offline (only for new orders)
+      // If online request fails, try saving offline (for new orders and returns)
       if (!isEditMode.value && selectedCustomer.value) {
         try {
-          const localId = await offlineStore.saveOrderOffline({
-            customerId: selectedCustomer.value.id,
-            customerName: selectedCustomer.value.company_name,
-            items: cartStore.items.map(item => ({
-              product_id: item.product_id,
-              name: item.name,
-              quantity: item.quantity,
-              price: item.price,
-              base_price: item.base_price,
-              unit_type: item.unit_type,
-              pieces_per_box: item.pieces_per_box,
-              vat_rate: item.vat_rate,
-            })),
-            subtotal: cartStore.subtotal,
-            vatTotal: cartStore.vatTotal,
-            total: cartStore.total,
-            notes: cartStore.notes,
-          })
-
-          lastOrderId.value = null
-          lastOrderNumber.value = `OFFLINE-${localId}`
-          savedOffline.value = true
-          showOrderSuccess.value = true
-          cartStore.clear()
+          await saveOffline()
         } catch (offlineError) {
           logger.error('Failed to save order offline:', offlineError)
           showErrorToast('Sipariş kaydedilemedi. Lütfen tekrar deneyin.', 5000)

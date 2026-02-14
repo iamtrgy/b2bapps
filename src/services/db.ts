@@ -382,6 +382,8 @@ export interface PendingOrder {
   local_id?: number
   customer_id: number
   customer_name: string
+  order_type?: 'sale' | 'return'
+  return_reference_order_id?: number | null
   items: {
     product_id: number
     name: string

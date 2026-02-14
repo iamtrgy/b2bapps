@@ -550,6 +550,8 @@ export const useOfflineStore = defineStore('offline', () => {
   async function saveOrderOffline(orderData: {
     customerId: number
     customerName: string
+    orderType?: 'sale' | 'return'
+    returnReferenceOrderId?: number | null
     items: any[]
     subtotal: number
     vatTotal: number
@@ -559,6 +561,8 @@ export const useOfflineStore = defineStore('offline', () => {
     const pendingOrder: Omit<PendingOrder, 'local_id'> = {
       customer_id: orderData.customerId,
       customer_name: orderData.customerName,
+      order_type: orderData.orderType || 'sale',
+      return_reference_order_id: orderData.returnReferenceOrderId ?? null,
       items: orderData.items.map(item => ({
         product_id: item.product_id,
         name: item.name,
@@ -612,8 +616,8 @@ export const useOfflineStore = defineStore('offline', () => {
           // Mark as syncing
           await updatePendingOrder({ ...order, sync_status: 'syncing' })
 
-          // Create order on server
-          const result = await orderApi.create({
+          // Create order on server — preserve return type if applicable
+          const createPayload: any = {
             customer_id: order.customer_id,
             items: order.items.map(item => ({
               product_id: item.product_id,
@@ -625,8 +629,18 @@ export const useOfflineStore = defineStore('offline', () => {
               vat_rate: item.vat_rate,
             })),
             notes: order.notes || undefined,
-            applied_promotions: [],
-          })
+          }
+
+          if (order.order_type === 'return') {
+            createPayload.type = 'return'
+            if (order.return_reference_order_id) {
+              createPayload.return_reference_order_id = order.return_reference_order_id
+            }
+          } else {
+            createPayload.applied_promotions = []
+          }
+
+          const result = await orderApi.create(createPayload)
 
           if (result.success) {
             // Remove from pending orders
