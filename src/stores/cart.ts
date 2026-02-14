@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import type { CartItem, Product, Promotion, Customer, Order, ReturnableOrder } from '@/types'
+import { ref, computed, toRaw } from 'vue'
+import type { CartItem, Product, Promotion, Customer, Order, ReturnableOrder, CreateOrderRequest } from '@/types'
 
 export const useCartStore = defineStore('cart', () => {
   // State
@@ -124,21 +124,19 @@ export const useCartStore = defineStore('cart', () => {
       : (item.broken_case_piece_price || item.price)
   }
 
-  function updateQuantity(index: number, quantity: number, customPrice?: number, boxPrice?: number, piecePrice?: number) {
+  function updateQuantity(index: number, quantity: number, prices?: { custom?: number; box?: number; piece?: number }) {
     if (quantity <= 0) {
       items.value.splice(index, 1)
     } else {
       items.value[index].quantity = quantity
-      // Update active price
-      if (customPrice !== undefined && customPrice > 0) {
-        items.value[index].price = customPrice
+      if (prices?.custom !== undefined && prices.custom > 0) {
+        items.value[index].price = prices.custom
       }
-      // Update both box and piece prices so they persist
-      if (boxPrice !== undefined && boxPrice > 0) {
-        items.value[index].box_price = boxPrice
+      if (prices?.box !== undefined && prices.box > 0) {
+        items.value[index].box_price = prices.box
       }
-      if (piecePrice !== undefined && piecePrice > 0) {
-        items.value[index].broken_case_piece_price = piecePrice
+      if (prices?.piece !== undefined && prices.piece > 0) {
+        items.value[index].broken_case_piece_price = prices.piece
       }
     }
   }
@@ -146,9 +144,8 @@ export const useCartStore = defineStore('cart', () => {
   function removeItem(index: number) {
     const removed = items.value[index]
     if (removed) {
-      // Deep clone the item to prevent reactivity issues
       lastRemovedItem.value = {
-        item: JSON.parse(JSON.stringify(removed)),
+        item: structuredClone(toRaw(removed)),
         index
       }
       items.value.splice(index, 1)
@@ -202,28 +199,31 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   function getOrderPayload() {
+    if (!customerId.value) {
+      throw new Error('Customer is required')
+    }
+
     if (returnMode.value) {
-      const payload: any = {
-        customer_id: customerId.value!,
+      const payload: CreateOrderRequest = {
+        customer_id: customerId.value,
         type: 'return',
         items: items.value.map((item) => ({
           product_id: item.product_id,
           quantity: item.quantity,
           price: item.price,
-          original_price: item.base_price,
+          base_price: item.base_price,
           unit_type: item.unit_type,
+          pieces_per_box: item.pieces_per_box,
           vat_rate: item.vat_rate,
         })),
         notes: notes.value || undefined,
-      }
-      if (returnReferenceOrderId.value) {
-        payload.return_reference_order_id = returnReferenceOrderId.value
+        return_reference_order_id: returnReferenceOrderId.value ?? undefined,
       }
       return payload
     }
 
     return {
-      customer_id: customerId.value!,
+      customer_id: customerId.value,
       items: items.value.map((item) => ({
         product_id: item.product_id,
         quantity: item.quantity,
