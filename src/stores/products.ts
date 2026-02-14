@@ -173,16 +173,38 @@ export const useProductStore = defineStore('products', () => {
   const hasProducts = computed(() => displayProducts.value.length > 0)
   const productCount = computed(() => displayProducts.value.length)
 
+  /** Normalize Turkish characters for search (İ→i, Ş→s, Ç→c, etc.) */
+  function normalizeTurkish(str: string): string {
+    return str
+      .toLowerCase()
+      .replace(/ı/g, 'i')
+      .replace(/İ/g, 'i')
+      .replace(/ğ/g, 'g')
+      .replace(/Ğ/g, 'g')
+      .replace(/ü/g, 'u')
+      .replace(/Ü/g, 'u')
+      .replace(/ş/g, 's')
+      .replace(/Ş/g, 's')
+      .replace(/ö/g, 'o')
+      .replace(/Ö/g, 'o')
+      .replace(/ç/g, 'c')
+      .replace(/Ç/g, 'c')
+  }
+
   // Shared offline search helper
   async function filterOfflineProducts(query: string, customerId: number): Promise<Product[]> {
     const cachedProducts = await getOfflineCached(customerId)
-    const queryLower = query.toLowerCase()
-    return cachedProducts.filter(p =>
-      p.name.toLowerCase().includes(queryLower) ||
-      p.sku?.toLowerCase().includes(queryLower) ||
-      p.barcode?.toLowerCase().includes(queryLower) ||
-      p.barcode_box?.toLowerCase().includes(queryLower)
-    ).map(cachedToProduct)
+    const queryNorm = normalizeTurkish(query)
+    return cachedProducts.filter(p => {
+      const name = normalizeTurkish(p.name)
+      const sku = p.sku?.toLowerCase() ?? ''
+      const barcode = p.barcode?.toLowerCase() ?? ''
+      const barcodeBox = p.barcode_box?.toLowerCase() ?? ''
+      return name.includes(queryNorm) ||
+        sku.includes(queryNorm) ||
+        barcode.includes(queryNorm) ||
+        barcodeBox.includes(queryNorm)
+    }).map(cachedToProduct)
   }
 
   // Actions
@@ -374,13 +396,12 @@ export const useProductStore = defineStore('products', () => {
         // Cache products
         offlineStore.cacheProductsForCustomer(response.products, customerId)
       } else {
-        // Offline: filter cached products by category with client-side pagination
+        // Offline: show all cached products for category (no pagination — already in memory)
         const cachedProducts = (await getOfflineCached(customerId)).filter(p =>
           p.category_id === categoryId
         ).map(cachedToProduct)
-        offlineCachedProducts.value = cachedProducts
-        categoryProducts.value = cachedProducts.slice(0, PAGE_SIZE)
-        hasMore.value = cachedProducts.length > PAGE_SIZE
+        categoryProducts.value = cachedProducts
+        hasMore.value = false
         totalCount.value = cachedProducts.length
         isOfflineMode.value = true
       }
@@ -392,9 +413,8 @@ export const useProductStore = defineStore('products', () => {
         const cachedProducts = (await getOfflineCached(customerId)).filter(p =>
           p.category_id === categoryId
         ).map(cachedToProduct)
-        offlineCachedProducts.value = cachedProducts
-        categoryProducts.value = cachedProducts.slice(0, PAGE_SIZE)
-        hasMore.value = cachedProducts.length > PAGE_SIZE
+        categoryProducts.value = cachedProducts
+        hasMore.value = false
         totalCount.value = cachedProducts.length
         isOfflineMode.value = true
       } catch {
@@ -405,9 +425,6 @@ export const useProductStore = defineStore('products', () => {
       isLoading.value = false
     }
   }
-
-  // Store for offline pagination
-  const offlineCachedProducts = ref<Product[]>([])
 
   async function loadAll(customerId: number, forceRefresh = false) {
     activeTab.value = 'all'
@@ -430,17 +447,15 @@ export const useProductStore = defineStore('products', () => {
         hasMore.value = response.hasMore ?? false
         totalCount.value = response.total ?? 0
         isOfflineMode.value = false
-        offlineCachedProducts.value = [] // Clear offline cache
         markCacheFresh('all', customerId)
 
         // Cache products for offline use
         offlineStore.cacheProductsForCustomer(response.products, customerId)
       } else {
-        // Offline: use cached data with client-side pagination
+        // Offline: show all cached products (no pagination — already in memory)
         const cachedProducts = (await getOfflineCached(customerId)).map(cachedToProduct)
-        offlineCachedProducts.value = cachedProducts
-        allProducts.value = cachedProducts.slice(0, PAGE_SIZE)
-        hasMore.value = cachedProducts.length > PAGE_SIZE
+        allProducts.value = cachedProducts
+        hasMore.value = false
         totalCount.value = cachedProducts.length
         isOfflineMode.value = true
       }
@@ -451,9 +466,8 @@ export const useProductStore = defineStore('products', () => {
       try {
         const cachedProducts = (await getOfflineCached(customerId)).map(cachedToProduct)
         if (cachedProducts.length > 0) {
-          offlineCachedProducts.value = cachedProducts
-          allProducts.value = cachedProducts.slice(0, PAGE_SIZE)
-          hasMore.value = cachedProducts.length > PAGE_SIZE
+          allProducts.value = cachedProducts
+          hasMore.value = false
           totalCount.value = cachedProducts.length
           isOfflineMode.value = true
         } else {
@@ -469,7 +483,7 @@ export const useProductStore = defineStore('products', () => {
     }
   }
 
-  // Load more products (for infinite scroll)
+  // Load more products (online pagination only — offline shows all at once)
   async function loadMore(customerId: number) {
     if (!hasMore.value || isLoadingMore.value || isLoading.value) return
 
@@ -477,20 +491,6 @@ export const useProductStore = defineStore('products', () => {
     isLoadingMore.value = true
 
     try {
-      // Offline: client-side pagination from cached data
-      if (isOfflineMode.value && offlineCachedProducts.value.length > 0) {
-        const nextBatch = offlineCachedProducts.value.slice(newOffset, newOffset + PAGE_SIZE)
-        if (activeTab.value === 'all') {
-          allProducts.value.push(...nextBatch)
-        } else if (activeTab.value === 'category') {
-          categoryProducts.value.push(...nextBatch)
-        }
-        offset.value = newOffset
-        hasMore.value = newOffset + PAGE_SIZE < offlineCachedProducts.value.length
-        return
-      }
-
-      // Online: fetch from API
       let response
       if (activeTab.value === 'all') {
         response = await productApi.getAll(customerId, PAGE_SIZE, newOffset)
@@ -533,7 +533,6 @@ export const useProductStore = defineStore('products', () => {
     offset.value = 0
     hasMore.value = false
     totalCount.value = 0
-    offlineCachedProducts.value = []
     categoryProductsCache.clear()
     clearOfflineCache()
     invalidateCache()
