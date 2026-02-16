@@ -2,6 +2,7 @@
   <button
     type="button"
     class="bg-card rounded-xl overflow-hidden transition-all hover:shadow-md active:scale-[0.98] group text-left w-full"
+    :class="cartQuantity > 0 ? 'ring-2 ring-primary/40' : ''"
     @click="handleClick"
   >
     <!-- Product Image (online only) -->
@@ -36,6 +37,14 @@
         </span>
       </div>
 
+      <!-- Cart quantity badge (top-right, below info button) -->
+      <div
+        v-if="cartQuantity > 0"
+        class="absolute bottom-2 right-2 bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow-sm"
+      >
+        {{ cartQuantity }} {{ cartUnitLabel }}
+      </div>
+
       <!-- Badges Container (top-left) -->
       <div class="absolute top-2 left-2 flex flex-col gap-1">
         <div
@@ -67,6 +76,9 @@
         </div>
         <span class="text-[10px] text-muted-foreground font-mono truncate">{{ product.sku }}</span>
         <div class="flex gap-1 ml-auto">
+          <div v-if="cartQuantity > 0" class="bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-md">
+            {{ cartQuantity }} {{ cartUnitLabel }}
+          </div>
           <div v-if="hasDiscount" class="bg-destructive text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
             -{{ discountPercentage }}%
           </div>
@@ -106,12 +118,14 @@ import { storeToRefs } from 'pinia'
 import { ImageIcon, Info } from 'lucide-vue-next'
 import type { Product } from '@/types'
 import { useOfflineStore } from '@/stores/offline'
+import { useCartStore } from '@/stores/cart'
 
 interface Props {
   product: Product
 }
 
 const { isOnline } = storeToRefs(useOfflineStore())
+const cartStore = useCartStore()
 
 const props = defineProps<Props>()
 
@@ -119,6 +133,10 @@ const emit = defineEmits<{
   add: [product: Product]
   quickView: [product: Product]
 }>()
+
+const cartItem = computed(() => cartStore.items.find(i => i.product_id === props.product.id))
+const cartQuantity = computed(() => cartItem.value?.quantity ?? 0)
+const cartUnitLabel = computed(() => cartItem.value?.unit_type === 'piece' ? 'adet' : 'koli')
 
 const hasDiscount = computed(() => {
   return props.product.total_discount_percent > 0
