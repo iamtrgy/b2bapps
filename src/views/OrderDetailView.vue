@@ -35,7 +35,7 @@
                   {{ formatStatus(order.status) }}
                 </Badge>
                 <Button
-                  v-if="order.status === 'pending'"
+                  v-if="order.status === 'pending' && !order.afas_synced"
                   variant="outline"
                   size="sm"
                   class="h-8 text-xs gap-1.5"

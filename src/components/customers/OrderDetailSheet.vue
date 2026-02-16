@@ -73,7 +73,7 @@
 
         <div class="flex gap-2">
           <Button
-            v-if="order?.status === 'pending'"
+            v-if="order?.status === 'pending' && !order?.afas_synced"
             variant="outline"
             class="flex-1 h-11 md:h-9 text-sm md:text-xs gap-1.5"
             @click="order && emit('edit-order', order.id)"

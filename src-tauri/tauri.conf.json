@@ -16,8 +16,8 @@
         "title": "POS App",
         "width": 1280,
         "height": 800,
-        "minWidth": 1024,
-        "minHeight": 700,
+        "minWidth": 360,
+        "minHeight": 640,
         "resizable": true,
         "fullscreen": false,
         "center": true

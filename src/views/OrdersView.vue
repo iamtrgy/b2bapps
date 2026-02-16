@@ -331,7 +331,7 @@
           <!-- Actions -->
           <div class="grid grid-cols-2 gap-2">
             <Button
-              v-if="orderDetail?.status === 'pending'"
+              v-if="orderDetail?.status === 'pending' && !orderDetail?.afas_synced"
               variant="outline"
               class="h-10 text-sm gap-1.5"
               @click="handleEditOrder"
