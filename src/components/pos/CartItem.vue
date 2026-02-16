@@ -499,8 +499,10 @@ async function openEditModal() {
   // If item is already being sold as piece, broken case was enabled
   brokenCaseEnabled.value = props.item.unit_type === 'piece'
   // Initialize price values
-  editBoxPrice.value = String(props.item.box_price || props.item.price)
-  editPiecePrice.value = String(props.item.broken_case_piece_price || (props.item.box_price || props.item.price) / (props.item.pieces_per_box || 1))
+  const boxP = props.item.box_price || props.item.price
+  editBoxPrice.value = String(boxP)
+  const pieceP = props.item.broken_case_piece_price || boxP / (props.item.pieces_per_box || 1)
+  editPiecePrice.value = (Math.round(pieceP * 100) / 100).toFixed(2)
   showModal.value = true
 
   // Fetch purchase history
