@@ -26,8 +26,8 @@
       </DialogHeader>
 
       <DialogFooter class="flex-col gap-2 sm:flex-col">
-        <Button class="w-full" @click="$emit('close')">Alışverişe Devam Et</Button>
-        <Button v-if="!savedOffline" variant="outline" class="w-full" @click="$emit('viewOrder')">Siparişi Görüntüle</Button>
+        <Button variant="outline" class="w-full" @click="$emit('close')">Alışverişe Devam Et</Button>
+        <Button v-if="!savedOffline" class="w-full" @click="$emit('viewOrder')">Siparişi Görüntüle</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>

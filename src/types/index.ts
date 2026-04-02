@@ -132,6 +132,8 @@ export interface Product {
   moq_unit: 'piece' | 'box'
   // Category
   category_id?: number | null
+  // Cost
+  base_cost?: number | null
 }
 
 // Cart types
@@ -157,6 +159,8 @@ export interface CartItem {
   allow_backorder?: boolean
   is_preorder?: boolean
   stock_quantity?: number
+  // Cost
+  base_cost?: number | null
 }
 
 // Order types

@@ -109,6 +109,7 @@ export const useCartStore = defineStore('cart', () => {
         allow_backorder: product.allow_backorder,
         is_preorder: product.is_preorder,
         stock_quantity: product.stock_quantity,
+        base_cost: product.base_cost ?? null,
       })
     }
   }

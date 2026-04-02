@@ -21,6 +21,8 @@
 
       <!-- Product Info -->
       <div class="flex-1 min-w-0">
+        <!-- SKU -->
+        <p v-if="item.sku" class="text-[10px] text-muted-foreground font-mono">{{ item.sku }}</p>
         <!-- Name & Badges -->
         <div class="flex items-center gap-1.5">
           <h4 class="text-sm font-semibold text-foreground line-clamp-1">{{ item.name }}</h4>
@@ -55,7 +57,7 @@
           <span class="text-sm text-muted-foreground ml-auto">× {{ item.quantity }}</span>
         </div>
 
-        <!-- Unit Info -->
+        <!-- Unit Info & Piece Price -->
         <div class="flex items-center gap-1.5 mt-0.5">
           <span v-if="item.unit_type === 'piece'" class="bg-amber-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">
             Tekli Adet
@@ -65,6 +67,9 @@
             <template v-if="item.pieces_per_box > 1">
               • {{ item.pieces_per_box }} adet/koli
             </template>
+          </span>
+          <span v-if="item.unit_type === 'box' && item.pieces_per_box > 1" class="text-[10px] text-muted-foreground ml-auto">
+            {{ formatPrice(item.price / item.pieces_per_box) }}/adet
           </span>
         </div>
 
@@ -107,6 +112,9 @@
             </div>
             <p v-if="item.pieces_per_box > 1" class="text-[11px] text-muted-foreground">
               {{ item.pieces_per_box }} Adet/Koli • {{ formatPrice(piecePrice) }}/Adet
+            </p>
+            <p v-if="isAdmin && item.base_cost" class="text-[11px] text-amber-600 font-medium">
+              Maliyet: {{ formatPrice(item.base_cost) }}/adet
             </p>
           </div>
         </div>
@@ -355,6 +363,7 @@ import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Minus, Plus, Trash2, Clock, Loader2 } from 'lucide-vue-next'
 import { useOfflineStore } from '@/stores/offline'
+import { useAuthStore } from '@/stores/auth'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -385,6 +394,7 @@ interface Props {
 }
 
 const { isOnline } = storeToRefs(useOfflineStore())
+const { isAdmin } = storeToRefs(useAuthStore())
 
 const props = defineProps<Props>()
 
