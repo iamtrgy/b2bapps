@@ -91,6 +91,7 @@
 
     <!-- Product Info -->
     <div class="p-2.5">
+      <p v-if="product.sku" class="text-[10px] text-muted-foreground font-mono">{{ product.sku }}</p>
       <h3 class="text-sm font-medium text-foreground line-clamp-2 leading-tight min-h-[2.25rem]">
         {{ product.name }}
       </h3>

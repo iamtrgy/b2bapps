@@ -21,8 +21,6 @@
 
       <!-- Product Info -->
       <div class="flex-1 min-w-0">
-        <!-- SKU -->
-        <p v-if="item.sku" class="text-[10px] text-muted-foreground font-mono">{{ item.sku }}</p>
         <!-- Name & Badges -->
         <div class="flex items-center gap-1.5">
           <h4 class="text-sm font-semibold text-foreground line-clamp-1">{{ item.name }}</h4>
@@ -113,8 +111,8 @@
             <p v-if="item.pieces_per_box > 1" class="text-[11px] text-muted-foreground">
               {{ item.pieces_per_box }} Adet/Koli • {{ formatPrice(piecePrice) }}/Adet
             </p>
-            <p v-if="isAdmin && item.base_cost" class="text-[11px] text-amber-600 font-medium">
-              Maliyet: {{ formatPrice(item.base_cost) }}/adet
+            <p v-if="isAdmin && Number(item.base_cost) > 0" class="text-[11px] text-amber-600 font-medium">
+              Maliyet: {{ formatPrice(Number(item.base_cost)) }}/adet
             </p>
           </div>
         </div>
