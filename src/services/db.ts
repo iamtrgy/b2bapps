@@ -248,6 +248,7 @@ export interface CachedProduct {
   can_purchase: boolean
   allow_backorder: boolean
   is_preorder: boolean
+  base_cost?: string | number | null
   cached_at: number
 }
 

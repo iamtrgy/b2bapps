@@ -213,6 +213,7 @@ export const useOfflineStore = defineStore('offline', () => {
         can_purchase: p.can_purchase,
         allow_backorder: p.allow_backorder ?? false,
         is_preorder: p.is_preorder ?? false,
+        base_cost: p.base_cost ?? null,
         cached_at: Date.now(),
       }))
 

@@ -48,6 +48,7 @@ function cachedToProduct(p: CachedProduct): Product {
     moq_quantity: 1,
     moq_unit: 'box',
     category_id: p.category_id,
+    base_cost: p.base_cost ?? null,
   } as Product
 }
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
