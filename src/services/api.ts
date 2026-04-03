@@ -79,7 +79,7 @@ export const authApi = {
 
   getUser: async (): Promise<User> => {
     const response = await api.get('/auth/user')
-    return response.data.data ?? response.data
+    return response.data.user ?? response.data.data ?? response.data
   },
 
   forgotPassword: async (email: string): Promise<{ success: boolean; message: string }> => {
